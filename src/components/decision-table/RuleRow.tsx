@@ -54,9 +54,9 @@ export const RuleRow: React.FC<RuleRowProps> = ({
         isDragging && "opacity-50 shadow-lg z-10"
       )}
     >
-      {/* 拖拽手柄 */}
+      {/* 拖拽手柄 - sticky left */}
       <div
-        className="w-8 flex-shrink-0 flex items-center justify-center bg-muted/50 border-r border-border cursor-grab active:cursor-grabbing"
+        className="w-8 flex-shrink-0 flex items-center justify-center bg-muted/50 border-r border-border cursor-grab active:cursor-grabbing sticky left-0 z-10"
         {...attributes}
         {...listeners}
       >
@@ -81,8 +81,6 @@ export const RuleRow: React.FC<RuleRowProps> = ({
             />
           </div>
         ))}
-        {/* 添加列占位 */}
-        <div className="w-[48px] flex-shrink-0 border-r border-border" />
       </div>
       
       {/* 分隔线 */}
@@ -106,12 +104,10 @@ export const RuleRow: React.FC<RuleRowProps> = ({
             />
           </div>
         ))}
-        {/* 添加列占位 */}
-        <div className="w-[48px] flex-shrink-0" />
       </div>
       
-      {/* 删除按钮 */}
-      <div className="w-10 flex-shrink-0 flex items-center justify-center bg-muted/50 border-l border-border">
+      {/* 删除按钮 - sticky right */}
+      <div className="w-10 flex-shrink-0 flex items-center justify-center bg-muted/50 border-l border-border sticky right-0 z-10">
         {canDelete && (
           <Button
             variant="ghost"

@@ -79,6 +79,14 @@ export const DATA_TYPE_LABELS: Record<DataType, string> = {
   boolean: '布尔值',
 };
 
+// 数据类型图标和颜色
+export const DATA_TYPE_ICONS: Record<DataType, { icon: string; color: string }> = {
+  string: { icon: 'A', color: 'text-blue-500' },
+  integer: { icon: '#', color: 'text-green-600' },
+  decimal: { icon: '#.', color: 'text-amber-500' },
+  boolean: { icon: '⊤', color: 'text-purple-500' },
+};
+
 // 生成唯一ID
 export const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Plus, Copy, ClipboardPaste, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Column, Rule, Variable, DataType, generateId, MOCK_VARIABLES } from './types';
+import { Column, Rule, Variable, DataType, generateId } from './types';
 import { TableHeader } from './TableHeader';
 import { RuleRow } from './RuleRow';
 import { useTableSelection } from './useTableSelection';
@@ -151,8 +151,8 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     }
   };
   
-  // 添加输入列
-  const handleAddInputColumn = useCallback((variable: Variable) => {
+  // 添加输入列 - 支持 insertIndex
+  const handleAddInputColumn = useCallback((variable: Variable, insertIndex?: number) => {
     const newColumn: Column = {
       id: generateId(),
       name: variable.name,
@@ -162,11 +162,13 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     };
     
     setColumns(prev => {
-      // 在最后一个输入列后面插入
-      const lastInputIndex = prev.reduce((acc, col, idx) => col.isInput ? idx : acc, -1);
-      const newColumns = [...prev];
-      newColumns.splice(lastInputIndex + 1, 0, newColumn);
-      return newColumns;
+      const inputCols = prev.filter(c => c.isInput);
+      const outputCols = prev.filter(c => !c.isInput);
+      
+      const idx = insertIndex ?? inputCols.length;
+      inputCols.splice(idx, 0, newColumn);
+      
+      return [...inputCols, ...outputCols];
     });
     
     // 为所有规则添加新列的单元格
@@ -176,8 +178,8 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     })));
   }, []);
   
-  // 添加输出列
-  const handleAddOutputColumn = useCallback((name: string, dataType: DataType) => {
+  // 添加输出列 - 支持 insertIndex
+  const handleAddOutputColumn = useCallback((name: string, dataType: DataType, insertIndex?: number) => {
     const newColumn: Column = {
       id: generateId(),
       name,
@@ -185,7 +187,15 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       isInput: false,
     };
     
-    setColumns(prev => [...prev, newColumn]);
+    setColumns(prev => {
+      const inputCols = prev.filter(c => c.isInput);
+      const outputCols = prev.filter(c => !c.isInput);
+      
+      const idx = insertIndex ?? outputCols.length;
+      outputCols.splice(idx, 0, newColumn);
+      
+      return [...inputCols, ...outputCols];
+    });
     
     // 为所有规则添加新列的单元格
     setRules(prev => prev.map(rule => ({
@@ -250,6 +260,9 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       toast({ variant: 'destructive', description: '读取剪贴板失败' });
     }
   };
+
+  const inputColumnCount = columns.filter(c => c.isInput).length;
+  const outputColumnCount = columns.filter(c => !c.isInput).length;
   
   return (
     <div className={cn("flex flex-col bg-card rounded-lg border border-border shadow-sm overflow-hidden", className)}>
@@ -282,21 +295,23 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       }}>
         {/* 区域标签（随横向滚动联动，纵向固定） */}
         <div className="sticky top-0 z-30 flex border-b border-border min-w-max bg-card h-8">
-          <div className="w-8 flex-shrink-0" />
+          {/* 左侧占位 - sticky */}
+          <div className="w-8 flex-shrink-0 sticky left-0 z-10 bg-card" />
           <div
             className="h-full flex items-center justify-center px-3 bg-secondary/30 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
-            style={{ width: `${columns.filter(c => c.isInput).length * 140 + 48}px` }}
+            style={{ width: `${inputColumnCount * 140}px` }}
           >
             输入条件
           </div>
           <div className="w-1 bg-border flex-shrink-0" />
           <div
             className="h-full flex items-center justify-center px-3 bg-primary/5 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
-            style={{ width: `${columns.filter(c => !c.isInput).length * 140 + 48}px` }}
+            style={{ width: `${outputColumnCount * 140}px` }}
           >
             输出结果
           </div>
-          <div className="w-10 flex-shrink-0" />
+          {/* 右侧占位 - sticky */}
+          <div className="w-10 flex-shrink-0 sticky right-0 z-10 bg-card" />
         </div>
 
         {/* 表头 */}
