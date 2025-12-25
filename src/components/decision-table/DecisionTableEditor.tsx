@@ -277,13 +277,19 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       </div>
       
       {/* 区域标签 */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border min-w-max">
         <div className="w-8 flex-shrink-0" />
-        <div className="flex-1 py-1 px-3 bg-secondary/30 text-center text-xs font-medium text-muted-foreground">
+        <div 
+          className="py-1 px-3 bg-secondary/30 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
+          style={{ width: `${columns.filter(c => c.isInput).length * 140 + 48}px` }}
+        >
           输入条件
         </div>
         <div className="w-1 bg-border flex-shrink-0" />
-        <div className="flex-1 py-1 px-3 bg-primary/5 text-center text-xs font-medium text-muted-foreground">
+        <div 
+          className="py-1 px-3 bg-primary/5 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
+          style={{ width: `${columns.filter(c => !c.isInput).length * 140 + 48}px` }}
+        >
           输出结果
         </div>
         <div className="w-10 flex-shrink-0" />
