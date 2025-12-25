@@ -127,7 +127,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   };
   
   return (
-    <div className="flex sticky top-0 z-20 bg-card border-b border-border min-w-max">
+    <div className="flex sticky top-8 z-20 bg-card border-b border-border min-w-max">
       {/* 拖拽手柄占位 */}
       <div className="w-8 flex-shrink-0 bg-muted/50 border-r border-border" />
       
