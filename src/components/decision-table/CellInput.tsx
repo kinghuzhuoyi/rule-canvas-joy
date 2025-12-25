@@ -92,11 +92,6 @@ export const CellInput: React.FC<CellInputProps> = ({
         isSelected && !isFocused && "ring-2 ring-primary ring-inset",
         error && "ring-2 ring-destructive ring-inset"
       )}
-      onMouseDown={e => {
-        if (!isFocused) {
-          onMouseDown(e);
-        }
-      }}
       onMouseEnter={onMouseEnter}
     >
       <Input
@@ -105,6 +100,10 @@ export const CellInput: React.FC<CellInputProps> = ({
         onChange={e => setLocalValue(e.target.value)}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        onMouseDown={e => {
+          // 触发选择但不阻止焦点获取
+          onMouseDown(e);
+        }}
         className={cn(
           "h-full border-0 rounded-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
           "bg-transparent text-sm"
