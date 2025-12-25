@@ -60,7 +60,7 @@ export const useTableSelection = ({ columns, rules }: UseTableSelectionProps): U
   }, [columns, rules, getColumnIndex, getRuleIndex]);
   
   const handleCellMouseDown = useCallback((ruleId: string, columnId: string, e: React.MouseEvent) => {
-    e.preventDefault();
+    // 只在按住 Shift 键或拖拽选择时阻止默认行为
     const cell = { ruleId, columnId };
     setSelectionStart(cell);
     setSelectionEnd(cell);
