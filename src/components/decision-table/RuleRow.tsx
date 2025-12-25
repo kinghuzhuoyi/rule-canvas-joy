@@ -50,7 +50,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex border-b border-border bg-card",
+        "flex border-b border-border bg-card min-w-max",
         isDragging && "opacity-50 shadow-lg z-10"
       )}
     >
@@ -64,54 +64,50 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       </div>
       
       {/* 输入列单元格 */}
-      <div className="flex-1 flex overflow-x-auto bg-secondary/10">
-        <div className="flex">
-          {inputColumns.map(column => (
-            <div
-              key={column.id}
-              className="min-w-[140px] h-10 border-r border-border"
-            >
-              <CellInput
-                value={rule.cells[column.id] || ''}
-                dataType={column.dataType}
-                isInput={true}
-                isSelected={isCellSelected(rule.id, column.id)}
-                onChange={value => onCellChange(rule.id, column.id, value)}
-                onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
-                onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
-              />
-            </div>
-          ))}
-          {/* 添加列占位 */}
-          <div className="min-w-[48px] border-r border-border" />
-        </div>
+      <div className="flex bg-secondary/10">
+        {inputColumns.map(column => (
+          <div
+            key={column.id}
+            className="w-[140px] flex-shrink-0 h-10 border-r border-border"
+          >
+            <CellInput
+              value={rule.cells[column.id] || ''}
+              dataType={column.dataType}
+              isInput={true}
+              isSelected={isCellSelected(rule.id, column.id)}
+              onChange={value => onCellChange(rule.id, column.id, value)}
+              onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
+              onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
+            />
+          </div>
+        ))}
+        {/* 添加列占位 */}
+        <div className="w-[48px] flex-shrink-0 border-r border-border" />
       </div>
       
       {/* 分隔线 */}
       <div className="w-1 bg-border flex-shrink-0" />
       
       {/* 输出列单元格 */}
-      <div className="flex-1 flex overflow-x-auto bg-primary/5">
-        <div className="flex">
-          {outputColumns.map(column => (
-            <div
-              key={column.id}
-              className="min-w-[140px] h-10 border-r border-border"
-            >
-              <CellInput
-                value={rule.cells[column.id] || ''}
-                dataType={column.dataType}
-                isInput={false}
-                isSelected={isCellSelected(rule.id, column.id)}
-                onChange={value => onCellChange(rule.id, column.id, value)}
-                onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
-                onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
-              />
-            </div>
-          ))}
-          {/* 添加列占位 */}
-          <div className="min-w-[48px]" />
-        </div>
+      <div className="flex bg-primary/5">
+        {outputColumns.map(column => (
+          <div
+            key={column.id}
+            className="w-[140px] flex-shrink-0 h-10 border-r border-border"
+          >
+            <CellInput
+              value={rule.cells[column.id] || ''}
+              dataType={column.dataType}
+              isInput={false}
+              isSelected={isCellSelected(rule.id, column.id)}
+              onChange={value => onCellChange(rule.id, column.id, value)}
+              onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
+              onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
+            />
+          </div>
+        ))}
+        {/* 添加列占位 */}
+        <div className="w-[48px] flex-shrink-0" />
       </div>
       
       {/* 删除按钮 */}
