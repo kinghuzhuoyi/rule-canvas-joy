@@ -63,7 +63,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
     
     if (isEditing) {
       return (
-        <div className="flex flex-col gap-2 p-2 min-w-[140px]" key={column.id}>
+        <div className="flex flex-col gap-2 p-2 w-[140px] flex-shrink-0" key={column.id}>
           <Input
             value={editName}
             onChange={e => setEditName(e.target.value)}
@@ -98,7 +98,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       <div
         key={column.id}
         className={cn(
-          "group relative flex flex-col items-center justify-center p-2 min-w-[140px]",
+          "group relative flex flex-col items-center justify-center p-2 w-[140px] flex-shrink-0",
           "border-r border-border last:border-r-0"
         )}
       >
@@ -127,38 +127,36 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   };
   
   return (
-    <div className="flex sticky top-0 z-20 bg-card border-b border-border">
+    <div className="flex sticky top-0 z-20 bg-card border-b border-border min-w-max">
       {/* 拖拽手柄占位 */}
       <div className="w-8 flex-shrink-0 bg-muted/50 border-r border-border" />
       
       {/* 输入列区域 */}
-      <div className="flex-1 flex overflow-visible bg-secondary/30">
-        <div className="flex items-stretch">
-          {inputColumns.map(col => renderColumnHeader(col, canDeleteInput))}
-          
-          {/* 添加输入列 */}
-          <div className="relative flex items-center justify-center px-2 min-w-[48px] border-r border-border">
-            {showInputSelector ? (
-              <div className="absolute top-full left-0 mt-1 z-50">
-                <VariableSelector
-                  onSelect={variable => {
-                    onAddInputColumn(variable);
-                    setShowInputSelector(false);
-                  }}
-                  onCancel={() => setShowInputSelector(false)}
-                />
-              </div>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setShowInputSelector(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+      <div className="flex bg-secondary/30">
+        {inputColumns.map(col => renderColumnHeader(col, canDeleteInput))}
+        
+        {/* 添加输入列 */}
+        <div className="relative flex items-center justify-center w-[48px] flex-shrink-0 border-r border-border">
+          {showInputSelector ? (
+            <div className="absolute top-full left-0 mt-1 z-50">
+              <VariableSelector
+                onSelect={variable => {
+                  onAddInputColumn(variable);
+                  setShowInputSelector(false);
+                }}
+                onCancel={() => setShowInputSelector(false)}
+              />
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowInputSelector(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
       
@@ -166,53 +164,51 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       <div className="w-1 bg-border flex-shrink-0" />
       
       {/* 输出列区域 */}
-      <div className="flex-1 flex overflow-visible bg-primary/5">
-        <div className="flex items-stretch">
-          {outputColumns.map(col => renderColumnHeader(col, canDeleteOutput))}
-          
-          {/* 添加输出列 */}
-          <div className="relative flex items-center px-2 min-w-[48px]">
-            {showOutputEditor ? (
-              <div className="absolute top-full left-0 mt-1 z-50 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[200px]">
-                <div className="flex flex-col gap-2">
-                  <Input
-                    placeholder="列名称"
-                    value={newOutputName}
-                    onChange={e => setNewOutputName(e.target.value)}
-                    className="h-8 text-sm"
-                    autoFocus
-                  />
-                  <Select value={newOutputType} onValueChange={v => setNewOutputType(v as DataType)}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="数据类型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 h-7" onClick={handleAddOutput}>
-                      添加
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7" onClick={() => setShowOutputEditor(false)}>
-                      取消
-                    </Button>
-                  </div>
+      <div className="flex bg-primary/5">
+        {outputColumns.map(col => renderColumnHeader(col, canDeleteOutput))}
+        
+        {/* 添加输出列 */}
+        <div className="relative flex items-center justify-center w-[48px] flex-shrink-0">
+          {showOutputEditor ? (
+            <div className="absolute top-full left-0 mt-1 z-50 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[200px]">
+              <div className="flex flex-col gap-2">
+                <Input
+                  placeholder="列名称"
+                  value={newOutputName}
+                  onChange={e => setNewOutputName(e.target.value)}
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <Select value={newOutputType} onValueChange={v => setNewOutputType(v as DataType)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="数据类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                  <Button size="sm" className="flex-1 h-7" onClick={handleAddOutput}>
+                    添加
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7" onClick={() => setShowOutputEditor(false)}>
+                    取消
+                  </Button>
                 </div>
               </div>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setShowOutputEditor(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setShowOutputEditor(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
       
