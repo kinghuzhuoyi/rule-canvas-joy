@@ -132,14 +132,14 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       <div className="w-8 flex-shrink-0 bg-muted/50 border-r border-border" />
       
       {/* 输入列区域 */}
-      <div className="flex-1 flex overflow-x-auto bg-secondary/30">
+      <div className="flex-1 flex overflow-visible bg-secondary/30">
         <div className="flex items-stretch">
           {inputColumns.map(col => renderColumnHeader(col, canDeleteInput))}
           
           {/* 添加输入列 */}
           <div className="relative flex items-center justify-center px-2 min-w-[48px] border-r border-border">
             {showInputSelector ? (
-              <div className="absolute top-full left-0 mt-1 z-30">
+              <div className="absolute top-full left-0 mt-1 z-50">
                 <VariableSelector
                   onSelect={variable => {
                     onAddInputColumn(variable);
@@ -166,14 +166,14 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       <div className="w-1 bg-border flex-shrink-0" />
       
       {/* 输出列区域 */}
-      <div className="flex-1 flex overflow-x-auto bg-primary/5">
+      <div className="flex-1 flex overflow-visible bg-primary/5">
         <div className="flex items-stretch">
           {outputColumns.map(col => renderColumnHeader(col, canDeleteOutput))}
           
           {/* 添加输出列 */}
           <div className="relative flex items-center px-2 min-w-[48px]">
             {showOutputEditor ? (
-              <div className="absolute top-full left-0 mt-1 z-30 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[200px]">
+              <div className="absolute top-full left-0 mt-1 z-50 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[200px]">
                 <div className="flex flex-col gap-2">
                   <Input
                     placeholder="列名称"
