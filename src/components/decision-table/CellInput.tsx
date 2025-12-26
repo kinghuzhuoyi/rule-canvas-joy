@@ -210,8 +210,8 @@ export const CellInput: React.FC<CellInputProps> = ({
         </div>
       )}
       
-      {/* 错误提示气泡 */}
-      {error && (
+      {/* 错误提示气泡 - 仅在聚焦时显示 */}
+      {error && isFocused && (
         <div className="absolute left-0 top-full z-20 mt-1 px-2.5 py-1.5 bg-destructive text-destructive-foreground text-xs rounded-md shadow-lg whitespace-nowrap flex items-center gap-1.5">
           <AlertCircle className="h-3 w-3 flex-shrink-0" />
           <span>{error}</span>
