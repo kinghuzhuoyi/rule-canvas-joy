@@ -16,6 +16,7 @@ interface RuleRowProps {
   onCellMouseDown: (ruleId: string, columnId: string, e: React.MouseEvent) => void;
   onCellMouseEnter: (ruleId: string, columnId: string) => void;
   canDelete: boolean;
+  isHighlighted?: boolean;
 }
 
 export const RuleRow: React.FC<RuleRowProps> = ({
@@ -27,6 +28,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
   onCellMouseDown,
   onCellMouseEnter,
   canDelete,
+  isHighlighted = false,
 }) => {
   const {
     attributes,
@@ -50,8 +52,9 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex border-b border-border bg-card min-w-max",
-        isDragging && "opacity-50 shadow-lg z-10"
+        "flex border-b border-border bg-card min-w-max transition-colors",
+        isDragging && "opacity-50 shadow-lg z-10",
+        isHighlighted && "bg-primary/10 ring-2 ring-primary/50 ring-inset"
       )}
     >
       {/* 拖拽手柄 - sticky left */}

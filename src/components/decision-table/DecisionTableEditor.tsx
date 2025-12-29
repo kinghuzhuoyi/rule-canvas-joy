@@ -28,6 +28,7 @@ interface DecisionTableEditorProps {
   className?: string;
   initialData?: { columns: Column[]; rules: Rule[] };
   onChange?: (data: { columns: Column[]; rules: Rule[] }) => void;
+  highlightedRuleId?: string | null;
 }
 
 // 默认初始数据
@@ -72,6 +73,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   className,
   initialData,
   onChange,
+  highlightedRuleId,
 }) => {
   const { toast } = useToast();
   const [columns, setColumns] = useState<Column[]>(() => initialData?.columns || getDefaultData().columns);
@@ -342,6 +344,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
                   onCellMouseDown={handleCellMouseDown}
                   onCellMouseEnter={handleCellMouseEnter}
                   canDelete={rules.length > 1}
+                  isHighlighted={highlightedRuleId === rule.id}
                 />
               ))}
             </div>
