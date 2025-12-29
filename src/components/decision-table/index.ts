@@ -1,4 +1,5 @@
 export { DecisionTableEditor } from './DecisionTableEditor';
+export { MarkdownPreview } from './MarkdownPreview';
 export { DecisionTableComponent } from './DecisionTableComponent';
 export { DecisionTableMetaEditor } from './DecisionTableMetaEditor';
 export { TestPanel } from './TestPanel';
