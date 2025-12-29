@@ -17,25 +17,22 @@ const renderMarkdown = (text: string): string => {
   if (!text) return '';
   
   return text
-    // 代码块 `code`
+    // 代码块 `code` (最先处理，避免内部被其他规则影响)
     .replace(/`([^`]+)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">$1</code>')
-    // 粗体 **text**
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    // 斜体 *text*
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    // 粗体 **text** (使用非贪婪匹配)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // 斜体 *text* (单个星号，使用非贪婪匹配)
+    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
     // 链接 [text](url)
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary underline" target="_blank">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary underline" target="_blank" rel="noopener noreferrer">$1</a>')
     // 换行
     .replace(/\n/g, '<br />');
 };
 
-// 截断文本
-const truncateText = (text: string, maxLength: number = 60): string => {
+// 将文本转为单行（用于预览显示）
+const toSingleLine = (text: string): string => {
   if (!text) return '';
-  // 移除换行符用于单行显示
-  const singleLine = text.replace(/\n/g, ' ');
-  if (singleLine.length <= maxLength) return singleLine;
-  return singleLine.slice(0, maxLength) + '...';
+  return text.replace(/\n/g, ' ');
 };
 
 export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
@@ -85,8 +82,8 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
             >
               {value ? (
                 <span
-                  className="text-foreground line-clamp-1"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(truncateText(value)) }}
+                  className="text-foreground truncate block"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(toSingleLine(value)) }}
                 />
               ) : (
                 <span className="text-muted-foreground">{placeholder}</span>
@@ -138,8 +135,8 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           >
             {value ? (
               <span
-                className="flex-1 text-foreground line-clamp-1"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(truncateText(value)) }}
+                className="flex-1 text-foreground truncate"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(toSingleLine(value)) }}
               />
             ) : (
               <span className="flex-1 text-muted-foreground">{placeholder}</span>
