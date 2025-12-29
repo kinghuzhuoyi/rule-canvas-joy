@@ -108,7 +108,7 @@ export const TestPanel: React.FC<TestPanelProps> = ({
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("border-r border-border bg-muted/20", className)}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("border-l border-border bg-muted/20", className)}>
       <CollapsibleTrigger asChild>
         <div className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50 border-b border-border">
           {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
