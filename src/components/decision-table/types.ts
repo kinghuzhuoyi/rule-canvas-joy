@@ -36,6 +36,30 @@ export interface DecisionTableData {
   rules: Rule[];
 }
 
+// 决策表元信息
+export interface DecisionTableMeta {
+  code: string;       // 唯一编码
+  name: string;       // 显示名称
+  description: string; // 描述说明
+}
+
+// 测试用例
+export interface TestCase {
+  id: string;
+  inputs: Record<string, string>;   // columnId -> 输入值
+  expectedOutputs: Record<string, string>; // columnId -> 预期输出
+  actualOutputs?: Record<string, string>;  // 实际输出
+  passed?: boolean;   // 测试是否通过
+  matchedRuleId?: string; // 匹配的规则ID
+}
+
+// 完整决策表数据
+export interface DecisionTableFullData {
+  meta: DecisionTableMeta;
+  columns: Column[];
+  rules: Rule[];
+}
+
 // 选中单元格
 export interface SelectedCell {
   ruleId: string;
