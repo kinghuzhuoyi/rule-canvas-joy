@@ -43,14 +43,26 @@ export interface DecisionTableMeta {
   description: string; // 描述说明
 }
 
+// 测试状态
+export type TestStatus = 'pending' | 'passed' | 'failed' | 'no-match';
+
 // 测试用例
 export interface TestCase {
   id: string;
+  name?: string;  // 用例名称（可选）
   inputs: Record<string, string>;   // columnId -> 输入值
   expectedOutputs: Record<string, string>; // columnId -> 预期输出
   actualOutputs?: Record<string, string>;  // 实际输出
-  passed?: boolean;   // 测试是否通过
+  status?: TestStatus;   // 执行状态
   matchedRuleId?: string; // 匹配的规则ID
+}
+
+// 批量测试结果统计
+export interface TestSuiteResult {
+  total: number;
+  passed: number;
+  failed: number;
+  noMatch: number;
 }
 
 // 完整决策表数据
