@@ -1,4 +1,0 @@
-project_id = "siuesdkpyyhtokijwqyn"
-
-[functions.generate-decision-table]
-verify_jwt = false

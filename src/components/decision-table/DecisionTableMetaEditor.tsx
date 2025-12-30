@@ -9,7 +9,6 @@ interface DecisionTableMetaEditorProps {
   meta: DecisionTableMeta;
   onChange: (meta: DecisionTableMeta) => void;
   readonly?: boolean;
-  compact?: boolean;
   className?: string;
 }
 
@@ -17,25 +16,11 @@ export const DecisionTableMetaEditor: React.FC<DecisionTableMetaEditorProps> = (
   meta,
   onChange,
   readonly = false,
-  compact = false,
   className,
 }) => {
   const handleChange = (field: keyof DecisionTableMeta, value: string) => {
     onChange({ ...meta, [field]: value });
   };
-
-  // 紧凑模式：只显示编码和名称
-  if (compact) {
-    return (
-      <div className={cn("flex items-center gap-3 bg-card border border-border rounded-lg px-3 py-2", className)}>
-        <span className="text-xs font-mono text-muted-foreground">{meta.code}</span>
-        <span className="text-sm font-medium">{meta.name}</span>
-        {meta.description && (
-          <span className="text-xs text-muted-foreground truncate max-w-xs">{meta.description.slice(0, 50)}...</span>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className={cn("bg-card border border-border rounded-lg p-4", className)}>
