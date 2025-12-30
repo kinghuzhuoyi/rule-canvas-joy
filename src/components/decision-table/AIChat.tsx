@@ -9,17 +9,20 @@ import { Send, Trash2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AIChatProps {
-  onApplyTable: (table: AIGeneratedTable) => void;
+  onApplyTable: (table: AIGeneratedTable, userMessage?: string) => void;
+  onUserMessage?: (message: string) => void;
   className?: string;
 }
 
 export const AIChat: React.FC<AIChatProps> = ({
   onApplyTable,
+  onUserMessage,
   className,
 }) => {
   const { messages, isLoading, sendMessage, clearMessages } = useAIChat();
   const [input, setInput] = useState('');
   const [appliedTableCode, setAppliedTableCode] = useState<string | undefined>();
+  const [lastUserMessage, setLastUserMessage] = useState<string>('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -39,6 +42,8 @@ export const AIChat: React.FC<AIChatProps> = ({
     
     const message = input;
     setInput('');
+    setLastUserMessage(message);
+    onUserMessage?.(message);
     await sendMessage(message);
   };
 
@@ -52,7 +57,7 @@ export const AIChat: React.FC<AIChatProps> = ({
 
   // 应用表格
   const handleApplyTable = (table: AIGeneratedTable) => {
-    onApplyTable(table);
+    onApplyTable(table, lastUserMessage);
     setAppliedTableCode(table.meta.code);
   };
 
