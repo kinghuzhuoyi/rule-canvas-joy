@@ -6,4 +6,7 @@ export { TestCaseImportDialog } from './TestCaseImportDialog';
 export { DecisionTableComponent } from './DecisionTableComponent';
 export { DecisionTableMetaEditor } from './DecisionTableMetaEditor';
 export { TestPanel } from './TestPanel';
+export { AIChat } from './AIChat';
+export { ChatMessage } from './ChatMessage';
+export { GeneratedTablePreview } from './GeneratedTablePreview';
 export type { Column, Rule, Variable, DataType, DecisionTableData, DecisionTableMeta, DecisionTableFullData, TestCase } from './types';
