@@ -22,14 +22,11 @@ const systemPrompt = `你是一个决策表设计专家。根据用户的描述�
 输出列的值格式：
 - 直接填写具体的输出值
 
-【重要】生成规则时的格式要求：
-rules 数组中的每一行必须是一个完整的对象，格式为：
-{
-  "输入列name": "条件值",
-  "输出列name": "结果值"
-}
+【极其重要 - 必须遵守】生成 rules 时，每个规则对象必须完整包含所有列的 key-value 对：
+- key 是列的 name 字段值（如 "credit_score"）
+- value 是该单元格的值（如 "(700,+inf)" 或 "500000"）
 
-完整示例 - 贷款审批决策表：
+===== 示例1：贷款审批（4列）=====
 columns: [
   {"name": "credit_score", "label": "信用分", "dataType": "integer", "isInput": true},
   {"name": "income", "label": "年收入", "dataType": "decimal", "isInput": true},
@@ -43,7 +40,22 @@ rules: [
   {"credit_score": "[0,600]", "income": "-", "loan_limit": "50000", "interest_rate": "0.12"}
 ]
 
-【警告】不要生成空的规则对象 {}，每个规则必须包含所有列的 name 作为 key，以及对应的值！`;
+===== 示例2：VIP折扣（4列）=====
+columns: [
+  {"name": "level", "label": "会员等级", "dataType": "string", "isInput": true},
+  {"name": "amount", "label": "消费金额", "dataType": "decimal", "isInput": true},
+  {"name": "discount", "label": "折扣", "dataType": "decimal", "isInput": false},
+  {"name": "points", "label": "积分", "dataType": "integer", "isInput": false}
+]
+rules: [
+  {"level": "白金", "amount": "(10000,+inf)", "discount": "0.85", "points": "500"},
+  {"level": "白金", "amount": "(5000,10000]", "discount": "0.88", "points": "300"},
+  {"level": "黄金", "amount": "(5000,+inf)", "discount": "0.90", "points": "200"},
+  {"level": "黄金", "amount": "[0,5000]", "discount": "0.95", "points": "100"},
+  {"level": "-", "amount": "-", "discount": "1.00", "points": "50"}
+]
+
+【禁止】不要生成空对象 {}，不要生成缺少 key 的对象！每个规则对象必须包含全部列的 name 作为 key！`;
 
 const tools = [
   {
@@ -84,20 +96,25 @@ const tools = [
           },
           rules: {
             type: "array",
-            description: `规则行数组。每一行是一个对象，其中 key 是列的 name 字段，value 是该单元格的字符串值。
+            minItems: 1,
+            description: `规则行数组。【重要】每个规则对象的 key 必须是列的 name，value 是该单元格的值。
 
-示例（假设有 credit_score, income, loan_limit, interest_rate 四列）：
+正确示例：
 [
   {"credit_score": "(700,+inf)", "income": "(100000,+inf)", "loan_limit": "500000", "interest_rate": "0.05"},
-  {"credit_score": "(600,700]", "income": "(50000,100000]", "loan_limit": "200000", "interest_rate": "0.08"},
-  {"credit_score": "[0,600]", "income": "-", "loan_limit": "50000", "interest_rate": "0.12"}
+  {"credit_score": "(600,700]", "income": "(50000,100000]", "loan_limit": "200000", "interest_rate": "0.08"}
 ]
 
-注意：每行必须包含所有列的 name 作为 key，不能返回空对象 {}！`,
+错误示例（禁止）：
+[{}, {}, {}]  // 空对象是错误的！每个对象必须包含所有列的 key-value`,
             items: {
               type: "object",
-              description: "单行规则，key为列的name，value为单元格值字符串",
-              additionalProperties: { type: "string" }
+              minProperties: 1,
+              description: "单行规则。key 是列名 (如 credit_score)，value 是单元格值 (如 '(700,+inf)')",
+              additionalProperties: { 
+                type: "string",
+                minLength: 1
+              }
             }
           }
         },
@@ -185,6 +202,13 @@ serve(async (req) => {
 
     if (!isRulesValid) {
       console.warn("AI generated incomplete rules, rules:", JSON.stringify(generatedTable.rules));
+      
+      return new Response(JSON.stringify({
+        success: false,
+        message: `已识别决策表结构「${generatedTable.meta.name}」，但规则内容需要更详细的描述。\n\n请补充具体的规则条件，例如：\n- 当信用分 > 700 且收入 > 10万时，额度 50万，利率 5%\n- 当信用分 600-700 时，额度 20万，利率 8%`,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({

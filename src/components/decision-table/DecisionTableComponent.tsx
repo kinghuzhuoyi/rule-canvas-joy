@@ -163,8 +163,7 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
     const generatedNotes = generateNotesFromTable(table, userMessage || lastUserMessage);
     setNotes(generatedNotes);
     
-    // 自动切换到手动模式以便查看和编辑
-    setMode('manual');
+    // 保持当前 AI 模式，不自动切换
   }, [lastUserMessage]);
 
   // 记录用户消息（用于生成备注）
