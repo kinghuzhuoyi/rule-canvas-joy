@@ -13,6 +13,7 @@ interface TestPanelProps {
   columns: Column[];
   rules: Rule[];
   onHighlightRule?: (ruleId: string | null) => void;
+  standalone?: boolean;  // 独立模式（Tab 页内不使用 Collapsible）
   className?: string;
 }
 
@@ -20,6 +21,7 @@ export const TestPanel: React.FC<TestPanelProps> = ({
   columns,
   rules,
   onHighlightRule,
+  standalone = false,
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -126,6 +128,106 @@ export const TestPanel: React.FC<TestPanelProps> = ({
     setTestCases(prev => [...prev, ...cases]);
   };
 
+  // 内部内容组件
+  const renderContent = () => (
+    <div className={cn("flex flex-col h-full", standalone ? "w-full" : "w-64")}>
+      {/* 操作栏 */}
+      <div className="flex items-center gap-1 p-2 border-b border-border shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={handleAddCase}
+        >
+          <Plus className="h-3 w-3" />
+          添加
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setImportDialogOpen(true)}
+        >
+          <Upload className="h-3 w-3" />
+          导入
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={handleRunAll}
+          disabled={testCases.length === 0}
+        >
+          <PlayCircle className="h-3 w-3" />
+          全部执行
+        </Button>
+      </div>
+
+      {/* 用例列表 */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <TestCaseList
+          cases={testCases}
+          selectedId={selectedCaseId}
+          onSelect={setSelectedCaseId}
+          onDelete={handleDeleteCase}
+          columns={columns}
+        />
+      </div>
+
+      {/* 统计信息 */}
+      {suiteResult && (
+        <div className="shrink-0 px-3 py-2 border-t border-border text-xs flex items-center gap-3">
+          <span className="text-muted-foreground">
+            共 {suiteResult.total}
+          </span>
+          <span className="text-green-600">✓ {suiteResult.passed}</span>
+          <span className="text-destructive">✗ {suiteResult.failed}</span>
+          {suiteResult.noMatch > 0 && (
+            <span className="text-amber-500">⚠ {suiteResult.noMatch}</span>
+          )}
+        </div>
+      )}
+
+      {/* 详情面板 */}
+      <TestCaseDetail
+        testCase={selectedCase}
+        columns={columns}
+        onChange={handleUpdateCase}
+        onRun={handleRunSingle}
+        onDelete={() => selectedCaseId && handleDeleteCase(selectedCaseId)}
+      />
+    </div>
+  );
+
+  // 独立模式：不使用 Collapsible
+  if (standalone) {
+    return (
+      <div className={cn('bg-muted/20 flex flex-col', className)}>
+        {/* 标题栏 */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
+          <span className="font-medium text-sm text-foreground">测试面板</span>
+          {testCases.length > 0 && (
+            <span className="text-xs text-muted-foreground">({testCases.length})</span>
+          )}
+        </div>
+
+        {/* 内容 */}
+        <div className="flex-1 overflow-hidden">
+          {renderContent()}
+        </div>
+
+        {/* 导入弹窗 */}
+        <TestCaseImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          columns={columns}
+          onImport={handleImport}
+        />
+      </div>
+    );
+  }
+
+  // 折叠模式
   return (
     <Collapsible
       open={isOpen}
@@ -143,73 +245,7 @@ export const TestPanel: React.FC<TestPanelProps> = ({
       </CollapsibleTrigger>
 
       <CollapsibleContent className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex flex-col h-full w-64">
-          {/* 操作栏 */}
-          <div className="flex items-center gap-1 p-2 border-b border-border shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={handleAddCase}
-            >
-              <Plus className="h-3 w-3" />
-              添加
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={() => setImportDialogOpen(true)}
-            >
-              <Upload className="h-3 w-3" />
-              导入
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={handleRunAll}
-              disabled={testCases.length === 0}
-            >
-              <PlayCircle className="h-3 w-3" />
-              全部执行
-            </Button>
-          </div>
-
-          {/* 用例列表 */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <TestCaseList
-              cases={testCases}
-              selectedId={selectedCaseId}
-              onSelect={setSelectedCaseId}
-              onDelete={handleDeleteCase}
-              columns={columns}
-            />
-          </div>
-
-          {/* 统计信息 */}
-          {suiteResult && (
-            <div className="shrink-0 px-3 py-2 border-t border-border text-xs flex items-center gap-3">
-              <span className="text-muted-foreground">
-                共 {suiteResult.total}
-              </span>
-              <span className="text-green-600">✓ {suiteResult.passed}</span>
-              <span className="text-destructive">✗ {suiteResult.failed}</span>
-              {suiteResult.noMatch > 0 && (
-                <span className="text-amber-500">⚠ {suiteResult.noMatch}</span>
-              )}
-            </div>
-          )}
-
-          {/* 详情面板 */}
-          <TestCaseDetail
-            testCase={selectedCase}
-            columns={columns}
-            onChange={handleUpdateCase}
-            onRun={handleRunSingle}
-            onDelete={() => selectedCaseId && handleDeleteCase(selectedCaseId)}
-          />
-        </div>
+        {renderContent()}
       </CollapsibleContent>
 
       {/* 导入弹窗 */}
