@@ -1,4 +1,4 @@
-import { DecisionTableMeta, Column, Rule, generateId } from '@/components/decision-table/types';
+import { DecisionTableMeta, Column, Rule, generateId, DataType } from '@/components/decision-table/types';
 
 // AI 生成的决策表结构
 export interface AIGeneratedTable {
@@ -7,12 +7,27 @@ export interface AIGeneratedTable {
   rules: Rule[];
 }
 
+// 待确认列信息
+export interface PendingColumn {
+  name?: string;
+  label?: string;
+  dataType?: DataType;
+  needsSelection?: boolean;
+}
+
+// 待确认信息
+export interface PendingConfirmation {
+  inputs?: PendingColumn[];
+  outputs?: PendingColumn[];
+}
+
 // 聊天消息
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   generatedTable?: AIGeneratedTable;
+  pendingConfirmation?: PendingConfirmation;
   timestamp: Date;
   isLoading?: boolean;
 }
@@ -34,6 +49,7 @@ interface AIResponse {
     }>;
     rules: Array<Record<string, string>>;
   };
+  pendingConfirmation?: PendingConfirmation;
   message?: string;
   error?: string;
 }
@@ -92,7 +108,7 @@ function transformAIResponse(response: AIResponse): AIGeneratedTable | null {
 export async function generateDecisionTable(
   userMessage: string,
   conversationHistory: ChatMessage[]
-): Promise<{ table: AIGeneratedTable | null; message: string }> {
+): Promise<{ table: AIGeneratedTable | null; message: string; pendingConfirmation?: PendingConfirmation }> {
   const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-decision-table`;
 
   // 构建消息历史
@@ -140,6 +156,7 @@ export async function generateDecisionTable(
     return {
       table,
       message: data.message || (table ? `已生成决策表：${table.meta.name}` : '无法解析生成结果'),
+      pendingConfirmation: data.pendingConfirmation,
     };
   } catch (error) {
     console.error('AI service error:', error);
@@ -150,4 +167,29 @@ export async function generateDecisionTable(
 // 生成唯一消息 ID
 export function generateMessageId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// 格式化列确认信息为用户消息
+export function formatColumnConfirmation(
+  inputs: Array<{ name: string; label: string; dataType: DataType }>,
+  outputs: Array<{ name: string; label: string; dataType: DataType }>
+): string {
+  let message = '已确认列信息：\n\n';
+  
+  if (inputs.length > 0) {
+    message += '**输入列：**\n';
+    inputs.forEach(col => {
+      message += `- ${col.label}（${col.name}，${col.dataType}）\n`;
+    });
+    message += '\n';
+  }
+  
+  if (outputs.length > 0) {
+    message += '**输出列：**\n';
+    outputs.forEach(col => {
+      message += `- ${col.label}（${col.name}，${col.dataType}）\n`;
+    });
+  }
+  
+  return message;
 }

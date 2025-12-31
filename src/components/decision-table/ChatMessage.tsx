@@ -2,18 +2,21 @@ import React from 'react';
 import { ChatMessage as ChatMessageType } from '@/services/aiService';
 import { AIGeneratedTable } from '@/services/aiService';
 import { GeneratedTablePreview } from './GeneratedTablePreview';
+import { ColumnConfirmationCard, ConfirmedColumn } from './ColumnConfirmationCard';
 import { cn } from '@/lib/utils';
 import { Bot, User, Loader2 } from 'lucide-react';
 
 interface ChatMessageProps {
   message: ChatMessageType;
   onApplyTable: (table: AIGeneratedTable) => void;
+  onColumnConfirm?: (inputs: ConfirmedColumn[], outputs: ConfirmedColumn[]) => void;
   appliedTableId?: string;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onApplyTable,
+  onColumnConfirm,
   appliedTableId,
 }) => {
   const isUser = message.role === 'user';
@@ -54,6 +57,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             <div className="whitespace-pre-wrap">{message.content}</div>
           )}
         </div>
+
+        {/* 待确认列信息卡片 */}
+        {message.pendingConfirmation && !message.isLoading && onColumnConfirm && (
+          <div className={cn(
+            "mt-2",
+            isUser ? "ml-auto" : "mr-auto",
+            "max-w-full"
+          )}>
+            <ColumnConfirmationCard
+              pendingInputs={message.pendingConfirmation.inputs}
+              pendingOutputs={message.pendingConfirmation.outputs}
+              onConfirm={onColumnConfirm}
+            />
+          </div>
+        )}
 
         {/* 生成的表格预览 */}
         {message.generatedTable && !message.isLoading && (

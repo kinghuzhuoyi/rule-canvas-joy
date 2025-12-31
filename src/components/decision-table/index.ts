@@ -12,4 +12,6 @@ export { GeneratedTablePreview } from './GeneratedTablePreview';
 export { ApplyConfirmDialog } from './ApplyConfirmDialog';
 export { NotesEditor } from './NotesEditor';
 export { ControllerPanel } from './ControllerPanel';
+export { ColumnConfirmationCard } from './ColumnConfirmationCard';
+export type { PendingColumn, ConfirmedColumn } from './ColumnConfirmationCard';
 export type { Column, Rule, Variable, DataType, DecisionTableData, DecisionTableMeta, DecisionTableFullData, DecisionTableNotes, TestCase } from './types';

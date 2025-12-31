@@ -1,11 +1,16 @@
 import { useState, useCallback } from 'react';
-import { ChatMessage, AIGeneratedTable, generateDecisionTable, generateMessageId } from '@/services/aiService';
+import { ChatMessage, AIGeneratedTable, PendingConfirmation, generateDecisionTable, generateMessageId, formatColumnConfirmation } from '@/services/aiService';
+import { DataType } from '@/components/decision-table/types';
 
 interface UseAIChatReturn {
   messages: ChatMessage[];
   isLoading: boolean;
   error: string | null;
   sendMessage: (content: string) => Promise<void>;
+  sendColumnConfirmation: (
+    inputs: Array<{ name: string; label: string; dataType: DataType }>,
+    outputs: Array<{ name: string; label: string; dataType: DataType }>
+  ) => Promise<void>;
   clearMessages: () => void;
   lastGeneratedTable: AIGeneratedTable | null;
 }
@@ -61,6 +66,7 @@ export function useAIChat(): UseAIChatReturn {
         content: result.message,
         timestamp: new Date(),
         generatedTable: result.table || undefined,
+        pendingConfirmation: result.pendingConfirmation,
       };
 
       setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
@@ -92,11 +98,21 @@ export function useAIChat(): UseAIChatReturn {
     setError(null);
   }, []);
 
+  // 发送列确认信息
+  const sendColumnConfirmation = useCallback(async (
+    inputs: Array<{ name: string; label: string; dataType: DataType }>,
+    outputs: Array<{ name: string; label: string; dataType: DataType }>
+  ) => {
+    const confirmMessage = formatColumnConfirmation(inputs, outputs);
+    await sendMessage(confirmMessage);
+  }, [sendMessage]);
+
   return {
     messages,
     isLoading,
     error,
     sendMessage,
+    sendColumnConfirmation,
     clearMessages,
     lastGeneratedTable,
   };
