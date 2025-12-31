@@ -146,7 +146,13 @@ export const TestPanel: React.FC<TestPanelProps> = ({
           variant="ghost"
           size="sm"
           className="h-7 text-xs gap-1"
-          onClick={() => setImportDialogOpen(true)}
+          onClick={() => {
+            // 先让当前活跃元素失焦，避免粘贴到决策表
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+            setImportDialogOpen(true);
+          }}
         >
           <Upload className="h-3 w-3" />
           导入
