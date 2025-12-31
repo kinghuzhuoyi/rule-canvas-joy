@@ -10,11 +10,28 @@ import { Send, Trash2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AIChatProps {
-  onApplyTable: (table: AIGeneratedTable, userMessage?: string) => void;
+  onApplyTable: (table: AIGeneratedTable, userMessage?: string, requirementDoc?: string) => void;
   onUserMessage?: (message: string) => void;
   hasExistingData?: boolean;
   className?: string;
 }
+
+// 查找最近的需求文档（确认阶段 AI 输出的完整文档）
+const findLatestRequirementDoc = (messages: Array<{ role: string; content: string; generatedTable?: AIGeneratedTable; isLoading?: boolean }>): string | undefined => {
+  // 从后往前找，找到最近一条包含需求文档格式的 assistant 消息
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role === 'assistant' && !msg.generatedTable && !msg.isLoading) {
+      // 检查是否是需求文档格式
+      if (msg.content.includes('请确认以上需求是否正确') || 
+          msg.content.includes('## 需求解析') ||
+          msg.content.includes('### 判断规则')) {
+        return msg.content;
+      }
+    }
+  }
+  return undefined;
+};
 
 export const AIChat: React.FC<AIChatProps> = ({
   onApplyTable,
@@ -69,7 +86,9 @@ export const AIChat: React.FC<AIChatProps> = ({
   // 确认应用表格
   const handleConfirmApply = () => {
     if (pendingTable) {
-      onApplyTable(pendingTable, lastUserMessage);
+      // 查找最近的需求文档
+      const requirementDoc = findLatestRequirementDoc(messages);
+      onApplyTable(pendingTable, lastUserMessage, requirementDoc);
       setAppliedTableCode(pendingTable.meta.code);
     }
     setShowConfirmDialog(false);
