@@ -1,12 +1,52 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const systemPrompt = `你是一个决策表设计专家。根据用户的描述，帮助设计和创建决策表。
 
+# 执行以下动作
+注意：不要急于行动，先理解用户需求，如果有不完善的地方提示用户完善之后再继续执行
+1.根据用户初始需求，进行初步需求整理
+2. 分析决策表的输入定义是否完善。决策表的输入会来源于用户的直接声明，也会隐含在决策表的规则描述中，两个来源都需要关注并且进行。对比决策表的每个输入定义都需要有编码，字符类型 和中文名。缺任一要素都要引导用户进行补充
+3. 分析决策表的输出定义是否完善。决策表的输出会来源于用户的直接声明，也会隐含在决策表的规则描述中，两个来源都需要关注并且进行。决策表的每个输出定义都需要有编码，字符类型 和中文名。缺任一要素都要引导用户进行补充
+4. 根据决策表的输入和输出定义，确定决策表结构
+5. 根据决策表结构，整理决策表规则描述
+6. 将整理好的需求，汇总成完整的决策表需求文档，文档按照【决策表需求文档标准格式】进行输出，并让用户进行确认；如果用户有补充，则根据补充完善需求描述，重新从步骤1开始顺序检查
+7. 根据需求，将决策表需求生成对象，生成对象按照【对象格式说明】进行执行
+
+===========以下是【决策表需求文档标准格式】================
+# [决策表名称]
+## 原始需求
+> 用户的原始描述...
+
+## 需求解析
+### 基本信息
+- **编码**: DT_LOAN_APPROVAL
+- **名称**: 贷款审批决策表
+- **描述**: 根据客户信用分和年收入决定贷款额度和利率
+
+### 输入列
+|列名 |类型 |说明 |
+|------|------|------|
+| credit_score | integer| 信用分 |
+| income | decimal| 年收入 |
+
+### 输出列
+|列名 |类型 |说明 |
+|------|------|------|
+|limit |decimal | 贷款额度 |
+| rate | decimal | 利率 |
+
+### 判断规则
+| credit_score | income     | limit  |rate   |
+|------------|-----------|--------|-------|
+| sZ0101     | (596,+inf)|1000| 0.0150 |
+
+===========以下是关键要素定义以及需求说明================
+# 决策表定义
 决策表用于定义业务规则，包含：
 1. 元信息：编码(code)、名称(name)、描述(description)
 2. 输入列：用于匹配条件的列
@@ -22,11 +62,36 @@ const systemPrompt = `你是一个决策表设计专家。根据用户的描述�
 输出列的值格式：
 - 直接填写具体的输出值
 
+# markdown格式需求说明
+用户可能会提供 Markdown 表格格式的规则，如：
+| product_id | score     | rate   |
+|------------|-----------|--------|
+| sZ0101     | (596,+inf)| 0.0150 |
+| sZ0101     | (566,596] | 0.0388 |
+| sZ0101     | (541,566] | 0.0444 |
+
+===== Markdown 表格解析规则 =====
+1. 表头行（第一行）定义列名
+2. 分隔行（第二行，含 --- 或 |---|）忽略
+3. 数据行从第三行开始，每行对应一条规则
+4. 保持单元格值原样（包括区间表达式如 "(596,+inf)"、小数如 "0.0150"）
+5. 去除值两侧的空格
+
+========【对象格式说明】========================
 【极其重要 - 必须遵守】生成 rules 时，每个规则对象必须完整包含所有列的 key-value 对：
 - key 是列的 name 字段值（如 "credit_score"）
 - value 是该单元格的值（如 "(700,+inf)" 或 "500000"）
 
-===== 示例1：贷款审批（4列）=====
+# 对象格式定义：
+## 输入输出说明：
+columns: [
+  {"name": "credit_score", "label": "信用分", "dataType": "integer", "isInput": true}]
+## 规则条件说明：
+rules: [
+  {"credit_score": "(700,+inf)", "income": "(100000,+inf)", "loan_limit": "500000", "interest_rate": "0.05"}]
+
+
+===== 示例1：贷款审批（4列）====
 columns: [
   {"name": "credit_score", "label": "信用分", "dataType": "integer", "isInput": true},
   {"name": "income", "label": "年收入", "dataType": "decimal", "isInput": true},
@@ -55,40 +120,7 @@ rules: [
   {"level": "-", "amount": "-", "discount": "1.00", "points": "50"}
 ]
 
-===== 示例3：解析 Markdown 表格格式 =====
-用户可能会提供 Markdown 表格格式的规则，如：
-| product_id | score     | rate   |
-|------------|-----------|--------|
-| sZ0101     | (596,+inf)| 0.0150 |
-| sZ0101     | (566,596] | 0.0388 |
-| sZ0101     | (541,566] | 0.0444 |
 
-你需要：
-1. 根据表头识别列名（第一行）
-2. 根据用户说明判断哪些是输入列、哪些是输出列
-3. 将表格每行数据转为规则对象
-
-解析后的 columns:
-[
-  {"name": "product_id", "label": "产品ID", "dataType": "string", "isInput": true},
-  {"name": "score", "label": "分数", "dataType": "integer", "isInput": true},
-  {"name": "rate", "label": "费率", "dataType": "decimal", "isInput": false}
-]
-
-解析后的 rules（必须完整包含每一列）:
-[
-  {"product_id": "sZ0101", "score": "(596,+inf)", "rate": "0.0150"},
-  {"product_id": "sZ0101", "score": "(566,596]", "rate": "0.0388"},
-  {"product_id": "sZ0101", "score": "(541,566]", "rate": "0.0444"}
-]
-
-===== Markdown 表格解析规则 =====
-1. 表头行（第一行）定义列名
-2. 分隔行（第二行，含 --- 或 |---|）忽略
-3. 数据行从第三行开始，每行对应一条规则
-4. 保持单元格值原样（包括区间表达式如 "(596,+inf)"、小数如 "0.0150"）
-5. 去除值两侧的空格
-6. 如果用户说明了"输入"和"输出"，据此设置 isInput
 
 【禁止】不要生成空对象 {}，不要生成缺少 key 的对象！每个规则对象必须包含全部列的 name 作为 key！`;
 
@@ -107,9 +139,9 @@ const tools = [
             properties: {
               code: { type: "string", description: "决策表编码，如 DT_LOAN_APPROVAL" },
               name: { type: "string", description: "决策表名称，如 贷款审批决策表" },
-              description: { type: "string", description: "决策表描述" }
+              description: { type: "string", description: "决策表描述" },
             },
-            required: ["code", "name", "description"]
+            required: ["code", "name", "description"],
           },
           columns: {
             type: "array",
@@ -119,15 +151,15 @@ const tools = [
               properties: {
                 name: { type: "string", description: "列名（英文），如 credit_score" },
                 label: { type: "string", description: "列显示标签（中文），如 信用分" },
-                dataType: { 
-                  type: "string", 
+                dataType: {
+                  type: "string",
                   enum: ["string", "integer", "decimal", "boolean"],
-                  description: "数据类型" 
+                  description: "数据类型",
                 },
-                isInput: { type: "boolean", description: "是否为输入列，true为输入列，false为输出列" }
+                isInput: { type: "boolean", description: "是否为输入列，true为输入列，false为输出列" },
               },
-              required: ["name", "label", "dataType", "isInput"]
-            }
+              required: ["name", "label", "dataType", "isInput"],
+            },
           },
           rules: {
             type: "array",
@@ -146,28 +178,28 @@ const tools = [
               type: "object",
               minProperties: 1,
               description: "单行规则。key 是列名 (如 credit_score)，value 是单元格值 (如 '(700,+inf)')",
-              additionalProperties: { 
+              additionalProperties: {
                 type: "string",
-                minLength: 1
-              }
-            }
-          }
+                minLength: 1,
+              },
+            },
+          },
         },
-        required: ["meta", "columns", "rules"]
-      }
-    }
-  }
+        required: ["meta", "columns", "rules"],
+      },
+    },
+  },
 ];
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
@@ -182,10 +214,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
         tools,
         tool_choice: { type: "function", function: { name: "create_decision_table" } },
       }),
@@ -194,7 +223,7 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "请求过于频繁，请稍后再试" }), {
           status: 429,
@@ -207,7 +236,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
+
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
@@ -215,14 +244,17 @@ serve(async (req) => {
     console.log("AI response:", JSON.stringify(data).slice(0, 1000));
 
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    
+
     if (!toolCall || toolCall.function.name !== "create_decision_table") {
-      return new Response(JSON.stringify({
-        success: false,
-        message: data.choices?.[0]?.message?.content || "无法理解您的需求，请更详细地描述决策表的用途和规则。",
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: data.choices?.[0]?.message?.content || "无法理解您的需求，请更详细地描述决策表的用途和规则。",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const generatedTable = JSON.parse(toolCall.function.arguments);
@@ -230,38 +262,45 @@ serve(async (req) => {
 
     // 验证规则完整性
     const columnNames = generatedTable.columns.map((col: any) => col.name);
-    const isRulesValid = generatedTable.rules.every((rule: any) => 
-      Object.keys(rule).length > 0 && 
-      columnNames.every((name: string) => rule[name] !== undefined)
+    const isRulesValid = generatedTable.rules.every(
+      (rule: any) => Object.keys(rule).length > 0 && columnNames.every((name: string) => rule[name] !== undefined),
     );
 
     if (!isRulesValid) {
       console.warn("AI generated incomplete rules, rules:", JSON.stringify(generatedTable.rules));
-      
-      return new Response(JSON.stringify({
-        success: false,
-        message: `已识别决策表结构「${generatedTable.meta.name}」，但规则内容需要更详细的描述。\n\n请补充具体的规则条件，例如：\n- 当信用分 > 700 且收入 > 10万时，额度 50万，利率 5%\n- 当信用分 600-700 时，额度 20万，利率 8%`,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `已识别决策表结构「${generatedTable.meta.name}」，但规则内容需要更详细的描述。\n\n请补充具体的规则条件，例如：\n- 当信用分 > 700 且收入 > 10万时，额度 50万，利率 5%\n- 当信用分 600-700 时，额度 20万，利率 8%`,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      table: generatedTable,
-      message: `已生成决策表「${generatedTable.meta.name}」，包含 ${generatedTable.columns.length} 列和 ${generatedTable.rules.length} 条规则。`,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        table: generatedTable,
+        message: `已生成决策表「${generatedTable.meta.name}」，包含 ${generatedTable.columns.length} 列和 ${generatedTable.rules.length} 条规则。`,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("Error in generate-decision-table function:", error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: error instanceof Error ? error.message : "生成失败" 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "生成失败",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
