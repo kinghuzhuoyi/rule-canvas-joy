@@ -154,14 +154,18 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
   }, []);
 
   // 应用 AI 生成的表格
-  const handleApplyAITable = useCallback((table: AIGeneratedTable, userMessage?: string) => {
+  const handleApplyAITable = useCallback((table: AIGeneratedTable, userMessage?: string, requirementDoc?: string) => {
     setMeta(table.meta);
     setColumns(table.columns);
     setRules(table.rules);
     
-    // 生成备注
-    const generatedNotes = generateNotesFromTable(table, userMessage || lastUserMessage);
-    setNotes(generatedNotes);
+    // 优先使用 AI 确认阶段的完整需求文档，否则降级自动生成
+    if (requirementDoc) {
+      setNotes(requirementDoc);
+    } else {
+      const generatedNotes = generateNotesFromTable(table, userMessage || lastUserMessage);
+      setNotes(generatedNotes);
+    }
     
     // 保持当前 AI 模式，不自动切换
   }, [lastUserMessage]);
