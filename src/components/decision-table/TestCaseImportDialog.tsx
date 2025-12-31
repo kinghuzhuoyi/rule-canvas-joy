@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -33,8 +33,20 @@ export const TestCaseImportDialog: React.FC<TestCaseImportDialogProps> = ({
     cases: TestCase[];
     errors: string[];
   } | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const templateHint = useMemo(() => generateTemplateHint(columns), [columns]);
+
+  // 弹窗打开时自动聚焦到 Textarea
+  useEffect(() => {
+    if (open) {
+      // 延迟聚焦，确保 Dialog 动画完成
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   const handleParse = () => {
     if (!rawData.trim()) {
@@ -86,6 +98,7 @@ export const TestCaseImportDialog: React.FC<TestCaseImportDialogProps> = ({
           <div className="space-y-2">
             <Label>粘贴数据</Label>
             <Textarea
+              ref={textareaRef}
               value={rawData}
               onChange={e => {
                 setRawData(e.target.value);
