@@ -209,6 +209,7 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
               <AIChat
                 onApplyTable={handleApplyAITable}
                 onUserMessage={handleUserMessage}
+                hasExistingData={rules.length > 0}
                 className="h-full"
               />
             </ResizablePanel>

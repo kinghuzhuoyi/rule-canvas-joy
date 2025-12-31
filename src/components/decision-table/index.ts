@@ -9,6 +9,7 @@ export { TestPanel } from './TestPanel';
 export { AIChat } from './AIChat';
 export { ChatMessage } from './ChatMessage';
 export { GeneratedTablePreview } from './GeneratedTablePreview';
+export { ApplyConfirmDialog } from './ApplyConfirmDialog';
 export { NotesEditor } from './NotesEditor';
 export { ControllerPanel } from './ControllerPanel';
 export type { Column, Rule, Variable, DataType, DecisionTableData, DecisionTableMeta, DecisionTableFullData, DecisionTableNotes, TestCase } from './types';

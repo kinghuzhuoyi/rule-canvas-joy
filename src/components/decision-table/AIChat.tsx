@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAIChat } from '@/hooks/useAIChat';
 import { AIGeneratedTable } from '@/services/aiService';
 import { ChatMessage } from './ChatMessage';
+import { ApplyConfirmDialog } from './ApplyConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,18 +12,22 @@ import { cn } from '@/lib/utils';
 interface AIChatProps {
   onApplyTable: (table: AIGeneratedTable, userMessage?: string) => void;
   onUserMessage?: (message: string) => void;
+  hasExistingData?: boolean;
   className?: string;
 }
 
 export const AIChat: React.FC<AIChatProps> = ({
   onApplyTable,
   onUserMessage,
+  hasExistingData = false,
   className,
 }) => {
   const { messages, isLoading, sendMessage, clearMessages } = useAIChat();
   const [input, setInput] = useState('');
   const [appliedTableCode, setAppliedTableCode] = useState<string | undefined>();
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
+  const [pendingTable, setPendingTable] = useState<AIGeneratedTable | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,10 +60,26 @@ export const AIChat: React.FC<AIChatProps> = ({
     }
   };
 
-  // 应用表格
-  const handleApplyTable = (table: AIGeneratedTable) => {
-    onApplyTable(table, lastUserMessage);
-    setAppliedTableCode(table.meta.code);
+  // 请求应用表格（显示确认对话框）
+  const handleRequestApply = (table: AIGeneratedTable) => {
+    setPendingTable(table);
+    setShowConfirmDialog(true);
+  };
+
+  // 确认应用表格
+  const handleConfirmApply = () => {
+    if (pendingTable) {
+      onApplyTable(pendingTable, lastUserMessage);
+      setAppliedTableCode(pendingTable.meta.code);
+    }
+    setShowConfirmDialog(false);
+    setPendingTable(null);
+  };
+
+  // 取消应用
+  const handleCancelApply = () => {
+    setShowConfirmDialog(false);
+    setPendingTable(null);
   };
 
   // 示例提示
@@ -93,7 +114,7 @@ export const AIChat: React.FC<AIChatProps> = ({
             <ChatMessage
               key={message.id}
               message={message}
-              onApplyTable={handleApplyTable}
+              onApplyTable={handleRequestApply}
               appliedTableId={appliedTableCode}
             />
           ))}
@@ -143,6 +164,16 @@ export const AIChat: React.FC<AIChatProps> = ({
           按 Enter 发送，Shift + Enter 换行
         </p>
       </div>
+
+      {/* 确认对话框 */}
+      <ApplyConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        table={pendingTable}
+        hasExistingData={hasExistingData}
+        onConfirm={handleConfirmApply}
+        onCancel={handleCancelApply}
+      />
     </div>
   );
 };
