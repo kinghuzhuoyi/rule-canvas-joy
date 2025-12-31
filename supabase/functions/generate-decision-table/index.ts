@@ -7,15 +7,34 @@ const corsHeaders = {
 
 const systemPrompt = `你是一个决策表设计专家。根据用户的描述，帮助设计和创建决策表。
 
+## 重要交互规则（必须严格遵守）
+
+### 第一阶段：需求分析与确认
+1. 根据用户描述，分析并整理决策表需求
+2. 按照【决策表需求文档标准格式】输出需求文档
+3. 在文档末尾添加确认提示
+4. 【禁止】在用户确认前调用 create_decision_table 工具
+
+### 第二阶段：生成决策表
+仅当用户回复包含以下确认词时，才调用 create_decision_table 工具：
+- 确认、确定、可以、没问题、正确、对的、好的、OK、ok、生成、应用
+
+### 多轮对话处理
+- 如果用户有补充或修改，重新整理需求文档，不要调用工具
+- 如果需求不完整（缺少列定义、规则等），引导用户补充
+- 只有在需求完整且用户明确确认后，才调用 create_decision_table 工具
+
 # 执行以下动作
 注意：不要急于行动，先理解用户需求，如果有不完善的地方提示用户完善之后再继续执行
-1.根据用户初始需求，进行初步需求整理
-2. 分析决策表的输入定义是否完善。决策表的输入会来源于用户的直接声明，也会隐含在决策表的规则描述中，两个来源都需要关注并且进行。对比决策表的每个输入定义都需要有编码，字符类型 和中文名。缺任一要素都要引导用户进行补充
-3. 分析决策表的输出定义是否完善。决策表的输出会来源于用户的直接声明，也会隐含在决策表的规则描述中，两个来源都需要关注并且进行。决策表的每个输出定义都需要有编码，字符类型 和中文名。缺任一要素都要引导用户进行补充
+1. 根据用户初始需求，进行初步需求整理
+2. 分析决策表的输入定义是否完善。决策表的输入会来源于用户的直接声明，也会隐含在决策表的规则描述中，两个来源都需要关注。每个输入定义都需要有编码、字符类型和中文名。缺任一要素都要引导用户进行补充
+3. 分析决策表的输出定义是否完善。决策表的输出会来源于用户的直接声明，也会隐含在决策表的规则描述中，两个来源都需要关注。每个输出定义都需要有编码、字符类型和中文名。缺任一要素都要引导用户进行补充
 4. 根据决策表的输入和输出定义，确定决策表结构
 5. 根据决策表结构，整理决策表规则描述
-6. 将整理好的需求，汇总成完整的决策表需求文档，文档按照【决策表需求文档标准格式】进行输出，并让用户进行确认；如果用户有补充，则根据补充完善需求描述，重新从步骤1开始顺序检查
-7. 根据需求，将决策表需求生成对象，生成对象按照【对象格式说明】进行执行
+6. 将整理好的需求，汇总成完整的决策表需求文档，文档按照【决策表需求文档标准格式】进行输出
+7. 在文档末尾添加确认提示："✅ 请确认以上需求是否正确？如有修改请补充，确认无误请回复「确认」。"
+8. 【等待用户确认】只有用户回复确认词后，才执行步骤9
+9. 用户确认后，调用 create_decision_table 工具生成决策表对象
 
 ===========以下是【决策表需求文档标准格式】================
 # [决策表名称]
@@ -45,6 +64,9 @@ const systemPrompt = `你是一个决策表设计专家。根据用户的描述�
 |------------|-----------|--------|-------|
 | sZ0101     | (596,+inf)|1000| 0.0150 |
 
+---
+✅ 请确认以上需求是否正确？如有修改请补充，确认无误请回复「确认」。
+
 ===========以下是关键要素定义以及需求说明================
 # 决策表定义
 决策表用于定义业务规则，包含：
@@ -69,6 +91,11 @@ const systemPrompt = `你是一个决策表设计专家。根据用户的描述�
 | sZ0101     | (596,+inf)| 0.0150 |
 | sZ0101     | (566,596] | 0.0388 |
 | sZ0101     | (541,566] | 0.0444 |
+
+当用户提供 Markdown 表格时：
+1. 如果用户已说明输入/输出列，整理成需求文档并请求确认
+2. 如果用户未说明，先询问用户确认哪些是输入列、哪些是输出列
+3. 表格数据行应逐行转换为规则对象，每个单元格值映射到对应列名
 
 ===== Markdown 表格解析规则 =====
 1. 表头行（第一行）定义列名
@@ -129,7 +156,7 @@ const tools = [
     type: "function",
     function: {
       name: "create_decision_table",
-      description: "创建一个决策表，包含元信息、列定义和规则",
+      description: "【仅在用户确认需求后调用】创建一个决策表，包含元信息、列定义和规则。在调用此工具前，必须先向用户展示需求文档并获得用户明确确认（用户回复包含：确认、确定、可以、没问题、正确、对的、好的、OK、生成、应用等确认词）。",
       parameters: {
         type: "object",
         properties: {
@@ -216,7 +243,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         tools,
-        tool_choice: { type: "function", function: { name: "create_decision_table" } },
+        tool_choice: "auto",  // 让 AI 自主决定是否调用工具
       }),
     });
 
@@ -245,11 +272,14 @@ serve(async (req) => {
 
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
+    // 如果没有工具调用，说明 AI 在进行需求分析或等待确认
     if (!toolCall || toolCall.function.name !== "create_decision_table") {
+      const content = data.choices?.[0]?.message?.content || "请描述您想创建的决策表需求。";
       return new Response(
         JSON.stringify({
-          success: false,
-          message: data.choices?.[0]?.message?.content || "无法理解您的需求，请更详细地描述决策表的用途和规则。",
+          success: true,
+          table: null,  // 没有生成表格，只是对话
+          message: content,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -257,6 +287,7 @@ serve(async (req) => {
       );
     }
 
+    // 用户已确认，AI 调用了工具生成决策表
     const generatedTable = JSON.parse(toolCall.function.arguments);
     console.log("Generated table:", JSON.stringify(generatedTable).slice(0, 500));
 
@@ -271,8 +302,9 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          success: false,
-          message: `已识别决策表结构「${generatedTable.meta.name}」，但规则内容需要更详细的描述。\n\n请补充具体的规则条件，例如：\n- 当信用分 > 700 且收入 > 10万时，额度 50万，利率 5%\n- 当信用分 600-700 时，额度 20万，利率 8%`,
+          success: true,
+          table: null,
+          message: `已识别决策表结构「${generatedTable.meta.name}」，但规则数据不完整。\n\n请确认规则内容是否正确，或补充具体的规则条件。`,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -284,7 +316,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         table: generatedTable,
-        message: `已生成决策表「${generatedTable.meta.name}」，包含 ${generatedTable.columns.length} 列和 ${generatedTable.rules.length} 条规则。`,
+        message: `✅ 已生成决策表「${generatedTable.meta.name}」，包含 ${generatedTable.columns.length} 列和 ${generatedTable.rules.length} 条规则。`,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
