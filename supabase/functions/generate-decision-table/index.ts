@@ -216,6 +216,61 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "request_column_confirmation",
+      description: "当输入或输出列定义不完整时（缺少编码、类型等），调用此工具请求用户确认列信息。用户将通过交互式卡片选择输入变量或填写输出列详情。",
+      parameters: {
+        type: "object",
+        properties: {
+          message: { 
+            type: "string", 
+            description: "提示消息，说明需要用户确认的内容" 
+          },
+          inputs: {
+            type: "array",
+            description: "待确认的输入列，用户需要从变量列表中选择",
+            items: {
+              type: "object",
+              properties: {
+                label: { type: "string", description: "已识别的中文名称" },
+                name: { type: "string", description: "已识别的编码（如有）" },
+                dataType: { 
+                  type: "string", 
+                  enum: ["string", "integer", "decimal", "boolean"],
+                  description: "已识别的类型（如有）" 
+                },
+                needsSelection: { 
+                  type: "boolean", 
+                  description: "是否需要用户从变量列表选择，通常为 true" 
+                }
+              },
+              required: ["label"]
+            }
+          },
+          outputs: {
+            type: "array",
+            description: "待确认的输出列，用户需要填写编码和类型",
+            items: {
+              type: "object",
+              properties: {
+                label: { type: "string", description: "已识别的中文名称" },
+                name: { type: "string", description: "已识别的编码（如有）" },
+                dataType: { 
+                  type: "string", 
+                  enum: ["string", "integer", "decimal", "boolean"],
+                  description: "已识别的类型（如有）" 
+                }
+              },
+              required: ["label"]
+            }
+          }
+        },
+        required: ["message"]
+      },
+    },
+  },
 ];
 
 serve(async (req) => {
@@ -273,12 +328,48 @@ serve(async (req) => {
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
     // 如果没有工具调用，说明 AI 在进行需求分析或等待确认
-    if (!toolCall || toolCall.function.name !== "create_decision_table") {
+    if (!toolCall) {
       const content = data.choices?.[0]?.message?.content || "请描述您想创建的决策表需求。";
       return new Response(
         JSON.stringify({
           success: true,
-          table: null,  // 没有生成表格，只是对话
+          table: null,
+          message: content,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 处理列确认请求工具调用
+    if (toolCall.function.name === "request_column_confirmation") {
+      const confirmationArgs = JSON.parse(toolCall.function.arguments);
+      console.log("Column confirmation requested:", JSON.stringify(confirmationArgs).slice(0, 500));
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          table: null,
+          message: confirmationArgs.message || "请确认以下列信息：",
+          pendingConfirmation: {
+            inputs: confirmationArgs.inputs || [],
+            outputs: confirmationArgs.outputs || [],
+          },
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 非 create_decision_table 工具调用，返回消息内容
+    if (toolCall.function.name !== "create_decision_table") {
+      const content = data.choices?.[0]?.message?.content || "请描述您想创建的决策表需求。";
+      return new Response(
+        JSON.stringify({
+          success: true,
+          table: null,
           message: content,
         }),
         {

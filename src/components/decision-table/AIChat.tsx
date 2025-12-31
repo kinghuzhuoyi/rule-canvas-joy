@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAIChat } from '@/hooks/useAIChat';
 import { AIGeneratedTable } from '@/services/aiService';
 import { ChatMessage } from './ChatMessage';
+import { ConfirmedColumn } from './ColumnConfirmationCard';
 import { ApplyConfirmDialog } from './ApplyConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,7 +40,7 @@ export const AIChat: React.FC<AIChatProps> = ({
   hasExistingData = false,
   className,
 }) => {
-  const { messages, isLoading, sendMessage, clearMessages } = useAIChat();
+  const { messages, isLoading, sendMessage, sendColumnConfirmation, clearMessages } = useAIChat();
   const [input, setInput] = useState('');
   const [appliedTableCode, setAppliedTableCode] = useState<string | undefined>();
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
@@ -101,6 +102,11 @@ export const AIChat: React.FC<AIChatProps> = ({
     setPendingTable(null);
   };
 
+  // 处理列确认
+  const handleColumnConfirm = useCallback((inputs: ConfirmedColumn[], outputs: ConfirmedColumn[]) => {
+    sendColumnConfirmation(inputs, outputs);
+  }, [sendColumnConfirmation]);
+
   // 示例提示
   const examples = [
     '创建一个信用评分决策表',
@@ -134,6 +140,7 @@ export const AIChat: React.FC<AIChatProps> = ({
               key={message.id}
               message={message}
               onApplyTable={handleRequestApply}
+              onColumnConfirm={handleColumnConfirm}
               appliedTableId={appliedTableCode}
             />
           ))}
