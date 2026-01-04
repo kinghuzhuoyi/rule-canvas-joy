@@ -49,43 +49,57 @@ export function parseRangeExpression(expr: string, dataType: DataType): RangeExp
 }
 
 // 判断输入值是否匹配规则条件
-export function matchesCondition(inputValue: string, condition: string, dataType: DataType): boolean {
-  if (!condition || condition.trim() === '' || condition === '-' || condition === '*') {
+export function matchesCondition(inputValue: unknown, condition: unknown, dataType: DataType): boolean {
+  const cond =
+    typeof condition === 'string'
+      ? condition
+      : condition === null || condition === undefined
+        ? ''
+        : String(condition);
+
+  if (!cond || cond.trim() === '' || cond === '-' || cond === '*') {
     return true; // 空条件匹配任意值
   }
-  
-  if (!inputValue || inputValue.trim() === '') {
+
+  const iv =
+    typeof inputValue === 'string'
+      ? inputValue
+      : inputValue === null || inputValue === undefined
+        ? ''
+        : String(inputValue);
+
+  if (!iv || iv.trim() === '') {
     return false; // 没有输入值则不匹配
   }
-  
-  const parsed = parseRangeExpression(condition, dataType);
-  
+
+  const parsed = parseRangeExpression(cond, dataType);
+
   if (parsed.type === 'any') {
     return true;
   }
-  
+
   if (parsed.type === 'range') {
-    const numValue = parseFloat(inputValue);
+    const numValue = parseFloat(iv);
     if (isNaN(numValue)) return false;
-    
+
     const { start, end, startInclusive, endInclusive } = parsed;
     const startOk = startInclusive ? numValue >= start! : numValue > start!;
     const endOk = endInclusive ? numValue <= end! : numValue < end!;
-    
+
     return startOk && endOk;
   }
-  
+
   // 单值匹配
   if (dataType === 'boolean') {
-    return inputValue.toLowerCase() === String(parsed.value).toLowerCase();
+    return iv.toLowerCase() === String(parsed.value).toLowerCase();
   }
-  
+
   if (dataType === 'integer' || dataType === 'decimal') {
-    return parseFloat(inputValue) === parsed.value;
+    return parseFloat(iv) === parsed.value;
   }
-  
+
   // 字符串比较
-  return inputValue === parsed.value;
+  return iv === parsed.value;
 }
 
 // 匹配规则
