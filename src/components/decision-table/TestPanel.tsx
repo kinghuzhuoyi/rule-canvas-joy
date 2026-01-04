@@ -43,7 +43,8 @@ export const TestPanel: React.FC<TestPanelProps> = ({
       }
       onImportComplete?.();
     }
-  }, [pendingImportCases, onImportComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingImportCases]);
 
   const selectedCase = useMemo(
     () => testCases.find(c => c.id === selectedCaseId) || null,
