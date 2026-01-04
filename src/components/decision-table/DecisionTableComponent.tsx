@@ -184,6 +184,11 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
     setPendingTestCases(cases);
   }, []);
 
+  // 清除待导入的测试用例
+  const handleTestCasesImported = useCallback(() => {
+    setPendingTestCases([]);
+  }, []);
+
   return (
     <div className={cn("flex flex-col h-full gap-3", className)}>
       {/* 顶部模式切换和基本信息 */}
@@ -244,7 +249,7 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
                 highlightedRuleId={highlightedRuleId}
                 onHighlightRule={setHighlightedRuleId}
                 pendingTestCases={pendingTestCases}
-                onTestCasesImported={() => setPendingTestCases([])}
+                onTestCasesImported={handleTestCasesImported}
                 className="h-full"
               />
             </ResizablePanel>
