@@ -195,8 +195,8 @@ export const TestPanel: React.FC<TestPanelProps> = ({
         </Button>
       </div>
 
-      {/* 用例列表 */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      {/* 用例列表 - 固定高度区域 */}
+      <div className="h-32 min-h-[8rem] shrink-0 overflow-hidden border-b border-border">
         <TestCaseList
           cases={testCases}
           selectedId={selectedCaseId}
@@ -208,7 +208,7 @@ export const TestPanel: React.FC<TestPanelProps> = ({
 
       {/* 统计信息 */}
       {suiteResult && (
-        <div className="shrink-0 px-3 py-2 border-t border-border text-xs flex items-center gap-3">
+        <div className="shrink-0 px-3 py-2 border-b border-border text-xs flex items-center gap-3">
           <span className="text-muted-foreground">
             共 {suiteResult.total}
           </span>
@@ -220,14 +220,16 @@ export const TestPanel: React.FC<TestPanelProps> = ({
         </div>
       )}
 
-      {/* 详情面板 */}
-      <TestCaseDetail
-        testCase={selectedCase}
-        columns={columns}
-        onChange={handleUpdateCase}
-        onRun={handleRunSingle}
-        onDelete={() => selectedCaseId && handleDeleteCase(selectedCaseId)}
-      />
+      {/* 详情面板 - 占据剩余空间 */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <TestCaseDetail
+          testCase={selectedCase}
+          columns={columns}
+          onChange={handleUpdateCase}
+          onRun={handleRunSingle}
+          onDelete={() => selectedCaseId && handleDeleteCase(selectedCaseId)}
+        />
+      </div>
     </div>
   );
 

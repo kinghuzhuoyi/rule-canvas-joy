@@ -57,7 +57,7 @@ export const TestCaseList: React.FC<TestCaseListProps> = ({
   }
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="h-full">
       <div className="space-y-1 p-2">
         {cases.map((testCase, index) => {
           const status = testCase.status || 'pending';

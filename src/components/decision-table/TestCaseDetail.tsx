@@ -25,7 +25,7 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({
 }) => {
   if (!testCase) {
     return (
-      <div className="p-4 text-center text-sm text-muted-foreground border-t border-border">
+      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground border-t border-border">
         选择一个用例查看详情
       </div>
     );
@@ -138,8 +138,9 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({
   };
 
   return (
-    <div className="border-t border-border">
-      <ScrollArea className="h-[280px]">
+    <div className="flex flex-col flex-1 min-h-0 border-t border-border">
+      {/* 可滚动内容区 */}
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-3 space-y-3">
           {/* 用例名称 */}
           <div className="space-y-1">
@@ -213,27 +214,31 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({
               </div>
             </div>
           )}
-
-          {/* 状态显示 */}
-          {getStatusDisplay()}
-
-          {/* 操作按钮 */}
-          <div className="flex gap-2 pt-2">
-            <Button size="sm" className="flex-1 gap-1 h-7 text-xs" onClick={onRun}>
-              <Play className="h-3 w-3" />
-              执行
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs text-destructive hover:text-destructive"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
         </div>
       </ScrollArea>
+
+      {/* 状态显示 - 固定 */}
+      {getStatusDisplay() && (
+        <div className="shrink-0 px-3 pb-2">
+          {getStatusDisplay()}
+        </div>
+      )}
+
+      {/* 操作按钮 - 固定在底部 */}
+      <div className="shrink-0 flex gap-2 p-3 border-t border-border">
+        <Button size="sm" className="flex-1 gap-1 h-7 text-xs" onClick={onRun}>
+          <Play className="h-3 w-3" />
+          执行
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs text-destructive hover:text-destructive"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 };
