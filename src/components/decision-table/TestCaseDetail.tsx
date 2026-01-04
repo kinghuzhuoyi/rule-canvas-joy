@@ -141,48 +141,55 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({
     <div className="flex flex-col flex-1 min-h-0 border-t border-border">
       {/* 可滚动内容区 */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 space-y-2">
-          {/* 输入参数 */}
+        <div className="p-3 space-y-3">
+          {/* 用例名称 */}
           <div className="space-y-1">
-            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-              输入
+            <Label className="text-xs text-muted-foreground">用例名称</Label>
+            <Input
+              value={testCase.name || ''}
+              onChange={e => handleNameChange(e.target.value)}
+              placeholder="可选"
+              className="h-7 text-xs"
+            />
+          </div>
+
+          {/* 输入参数 */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              输入参数
             </Label>
             {inputColumns.map(col => (
-              <div key={col.id} className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground w-16 shrink-0 truncate">{col.name}</Label>
-                <div className="flex-1">
-                  {renderInput(col, testCase.inputs[col.id] || '', v =>
-                    handleInputChange(col.id, v)
-                  )}
-                </div>
+              <div key={col.id} className="space-y-0.5">
+                <Label className="text-xs text-foreground">{col.name}</Label>
+                {renderInput(col, testCase.inputs[col.id] || '', v =>
+                  handleInputChange(col.id, v)
+                )}
               </div>
             ))}
           </div>
 
           {/* 预期输出 */}
-          <div className="space-y-1">
-            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-              预期
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              预期输出
             </Label>
             {outputColumns.map(col => (
-              <div key={col.id} className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground w-16 shrink-0 truncate">{col.name}</Label>
-                <div className="flex-1">
-                  {renderInput(col, testCase.expectedOutputs[col.id] || '', v =>
-                    handleExpectedChange(col.id, v)
-                  )}
-                </div>
+              <div key={col.id} className="space-y-0.5">
+                <Label className="text-xs text-foreground">{col.name}</Label>
+                {renderInput(col, testCase.expectedOutputs[col.id] || '', v =>
+                  handleExpectedChange(col.id, v)
+                )}
               </div>
             ))}
           </div>
 
           {/* 实际输出（执行后显示） */}
           {testCase.actualOutputs && Object.keys(testCase.actualOutputs).length > 0 && (
-            <div className="space-y-1">
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                实际
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                实际输出
               </Label>
-              <div className="bg-muted/50 rounded px-2 py-1 space-y-0.5">
+              <div className="bg-muted/50 rounded p-2 space-y-1">
                 {outputColumns.map(col => {
                   const actual = testCase.actualOutputs?.[col.id] || '-';
                   const expected = testCase.expectedOutputs[col.id];
@@ -210,25 +217,23 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({
         </div>
       </ScrollArea>
 
-      {/* 操作按钮 + 状态 - 固定在底部 */}
-      <div className="shrink-0 flex items-center gap-2 p-2 border-t border-border">
-        {testCase.status === 'passed' && (
-          <Check className="h-4 w-4 text-green-600 shrink-0" />
-        )}
-        {testCase.status === 'failed' && (
-          <X className="h-4 w-4 text-destructive shrink-0" />
-        )}
-        {testCase.status === 'no-match' && (
-          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-        )}
-        <Button size="sm" className="flex-1 gap-1 h-6 text-xs" onClick={onRun}>
+      {/* 状态显示 - 固定 */}
+      {getStatusDisplay() && (
+        <div className="shrink-0 px-3 pb-2">
+          {getStatusDisplay()}
+        </div>
+      )}
+
+      {/* 操作按钮 - 固定在底部 */}
+      <div className="shrink-0 flex gap-2 p-3 border-t border-border">
+        <Button size="sm" className="flex-1 gap-1 h-7 text-xs" onClick={onRun}>
           <Play className="h-3 w-3" />
           执行
         </Button>
         <Button
           size="sm"
           variant="outline"
-          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+          className="h-7 text-xs text-destructive hover:text-destructive"
           onClick={onDelete}
         >
           <Trash2 className="h-3 w-3" />
