@@ -196,7 +196,7 @@ export const TestPanel: React.FC<TestPanelProps> = ({
       </div>
 
       {/* 用例列表 - 固定高度区域 */}
-      <div className="h-48 min-h-[12rem] shrink-0 overflow-hidden border-b border-border">
+      <div className="h-64 min-h-[16rem] shrink-0 overflow-hidden border-b border-border">
         <TestCaseList
           cases={testCases}
           selectedId={selectedCaseId}
