@@ -3,17 +3,24 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { AIGeneratedTable } from '@/services/aiService';
 import { ChatMessage } from './ChatMessage';
 import { ConfirmedColumn } from './ColumnConfirmationCard';
+import { GeneratedTestCase } from './TestCasePreviewCard';
 import { ApplyConfirmDialog } from './ApplyConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Trash2, Sparkles } from 'lucide-react';
+import { Send, Trash2, Sparkles, FlaskConical, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Column, Rule, TestCase, generateId } from './types';
+import { toast } from 'sonner';
 
 interface AIChatProps {
   onApplyTable: (table: AIGeneratedTable, userMessage?: string, requirementDoc?: string) => void;
   onUserMessage?: (message: string) => void;
+  onImportTestCases?: (cases: TestCase[]) => void;
   hasExistingData?: boolean;
+  columns?: Column[];
+  rules?: Rule[];
+  notes?: string;
   className?: string;
 }
 
@@ -37,12 +44,17 @@ const findLatestRequirementDoc = (messages: Array<{ role: string; content: strin
 export const AIChat: React.FC<AIChatProps> = ({
   onApplyTable,
   onUserMessage,
+  onImportTestCases,
   hasExistingData = false,
+  columns = [],
+  rules = [],
+  notes = '',
   className,
 }) => {
-  const { messages, isLoading, sendMessage, sendColumnConfirmation, clearMessages } = useAIChat();
+  const { messages, isLoading, sendMessage, sendColumnConfirmation, sendTestCaseRequest, clearMessages } = useAIChat();
   const [input, setInput] = useState('');
   const [appliedTableCode, setAppliedTableCode] = useState<string | undefined>();
+  const [importedTestCaseMessageId, setImportedTestCaseMessageId] = useState<string | undefined>();
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
   const [pendingTable, setPendingTable] = useState<AIGeneratedTable | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -107,12 +119,67 @@ export const AIChat: React.FC<AIChatProps> = ({
     sendColumnConfirmation(inputs, outputs);
   }, [sendColumnConfirmation]);
 
-  // 示例提示
-  const examples = [
-    '创建一个信用评分决策表',
-    '贷款审批规则，根据信用分判断额度',
-    'VIP客户折扣策略',
+  // 处理测试用例导入
+  const handleImportTestCases = useCallback((cases: GeneratedTestCase[], messageId: string) => {
+    if (!onImportTestCases) return;
+
+    // 将 AI 生成的测试用例转换为 TestCase 格式
+    const testCases: TestCase[] = cases.map((tc, index) => {
+      // 将列名映射到列 ID
+      const inputValues: Record<string, string> = {};
+      const expectedOutputs: Record<string, string> = {};
+
+      columns.forEach(col => {
+        if (col.isInput && tc.inputs[col.name] !== undefined) {
+          inputValues[col.id] = tc.inputs[col.name];
+        }
+        if (!col.isInput && tc.expectedOutputs?.[col.name] !== undefined) {
+          expectedOutputs[col.id] = tc.expectedOutputs[col.name];
+        }
+      });
+
+      return {
+        id: generateId(),
+        name: tc.name || `用例 ${index + 1}`,
+        inputs: inputValues,
+        expectedOutputs,
+        status: 'pending' as const,
+      };
+    });
+
+    onImportTestCases(testCases);
+    setImportedTestCaseMessageId(messageId);
+    toast.success(`已导入 ${testCases.length} 个测试用例到测试面板`);
+  }, [columns, onImportTestCases]);
+
+  // 功能按钮配置
+  const actionButtons = [
+    { 
+      label: '测试用例生成', 
+      action: 'generate-tests', 
+      icon: FlaskConical,
+      disabled: columns.length === 0 || rules.length === 0,
+    },
+    { 
+      label: '异常定位', 
+      action: 'diagnose', 
+      icon: AlertCircle,
+      disabled: true, // 暂未实现
+    },
   ];
+
+  // 处理功能按钮点击
+  const handleActionClick = async (action: string) => {
+    if (action === 'generate-tests') {
+      if (columns.length === 0 || rules.length === 0) {
+        toast.error('请先创建决策表后再生成测试用例');
+        return;
+      }
+      await sendTestCaseRequest(columns, rules, notes);
+    } else if (action === 'diagnose') {
+      toast.info('异常定位功能即将推出');
+    }
+  };
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
@@ -141,30 +208,32 @@ export const AIChat: React.FC<AIChatProps> = ({
               message={message}
               onApplyTable={handleRequestApply}
               onColumnConfirm={handleColumnConfirm}
+              onImportTestCases={(cases) => handleImportTestCases(cases, message.id)}
               appliedTableId={appliedTableCode}
+              importedTestCaseMessageId={importedTestCaseMessageId}
             />
           ))}
         </div>
       </ScrollArea>
 
-      {/* 快捷示例 */}
-      {messages.length <= 1 && (
-        <div className="px-4 pb-2">
-          <div className="flex flex-wrap gap-2">
-            {examples.map((example, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                className="text-xs h-7"
-                onClick={() => setInput(example)}
-              >
-                {example}
-              </Button>
-            ))}
-          </div>
+      {/* 功能按钮区 */}
+      <div className="px-4 pb-2">
+        <div className="flex flex-wrap gap-2">
+          {actionButtons.map((btn) => (
+            <Button
+              key={btn.action}
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1.5"
+              onClick={() => handleActionClick(btn.action)}
+              disabled={btn.disabled || isLoading}
+            >
+              <btn.icon className="w-3.5 h-3.5" />
+              {btn.label}
+            </Button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* 输入区域 */}
       <div className="p-4 border-t border-border">

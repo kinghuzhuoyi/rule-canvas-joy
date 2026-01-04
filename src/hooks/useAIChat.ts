@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { ChatMessage, AIGeneratedTable, PendingConfirmation, generateDecisionTable, generateMessageId, formatColumnConfirmation } from '@/services/aiService';
-import { DataType } from '@/components/decision-table/types';
+import { ChatMessage, AIGeneratedTable, AIGeneratedTestCase, generateDecisionTable, generateMessageId, formatColumnConfirmation } from '@/services/aiService';
+import { DataType, Column, Rule } from '@/components/decision-table/types';
 
 interface UseAIChatReturn {
   messages: ChatMessage[];
@@ -11,6 +11,7 @@ interface UseAIChatReturn {
     inputs: Array<{ name: string; label: string; dataType: DataType }>,
     outputs: Array<{ name: string; label: string; dataType: DataType }>
   ) => Promise<void>;
+  sendTestCaseRequest: (columns: Column[], rules: Rule[], notes?: string) => Promise<void>;
   clearMessages: () => void;
   lastGeneratedTable: AIGeneratedTable | null;
 }
@@ -67,6 +68,8 @@ export function useAIChat(): UseAIChatReturn {
         timestamp: new Date(),
         generatedTable: result.table || undefined,
         pendingConfirmation: result.pendingConfirmation,
+        generatedTestCases: result.generatedTestCases,
+        testCaseSummary: result.testCaseSummary,
       };
 
       setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
@@ -107,12 +110,55 @@ export function useAIChat(): UseAIChatReturn {
     await sendMessage(confirmMessage);
   }, [sendMessage]);
 
+  // 发送测试用例生成请求
+  const sendTestCaseRequest = useCallback(async (
+    columns: Column[],
+    rules: Rule[],
+    notes?: string
+  ) => {
+    if (isLoading) return;
+
+    const inputCols = columns.filter(c => c.isInput);
+    const outputCols = columns.filter(c => !c.isInput);
+
+    // 构建决策表结构描述
+    let tableDescription = '请根据以下决策表生成测试用例：\n\n';
+    
+    tableDescription += '### 输入列\n';
+    inputCols.forEach(col => {
+      tableDescription += `- ${col.name} (${col.dataType})\n`;
+    });
+    
+    tableDescription += '\n### 输出列\n';
+    outputCols.forEach(col => {
+      tableDescription += `- ${col.name} (${col.dataType})\n`;
+    });
+    
+    tableDescription += '\n### 规则\n';
+    tableDescription += '| ' + columns.map(c => c.name).join(' | ') + ' |\n';
+    tableDescription += '|' + columns.map(() => '---').join('|') + '|\n';
+    
+    rules.forEach(rule => {
+      const cells = columns.map(col => rule.cells[col.id] || '-');
+      tableDescription += '| ' + cells.join(' | ') + ' |\n';
+    });
+
+    if (notes) {
+      tableDescription += '\n### 需求备注\n' + notes.slice(0, 500);
+    }
+
+    tableDescription += '\n\n请生成覆盖常规条件、边界值、缺失值和无效值的测试用例。';
+
+    await sendMessage(tableDescription);
+  }, [sendMessage, isLoading]);
+
   return {
     messages,
     isLoading,
     error,
     sendMessage,
     sendColumnConfirmation,
+    sendTestCaseRequest,
     clearMessages,
     lastGeneratedTable,
   };

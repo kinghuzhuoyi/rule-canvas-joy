@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { DecisionTableMeta, DecisionTableFullData, Column, Rule, generateId, DecisionTableNotes } from './types';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { DecisionTableMeta, DecisionTableFullData, Column, Rule, generateId, TestCase } from './types';
 import { DecisionTableMetaEditor } from './DecisionTableMetaEditor';
 import { TestPanel } from './TestPanel';
 import { DecisionTableEditor } from './DecisionTableEditor';
@@ -136,6 +136,10 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
   );
   const [highlightedRuleId, setHighlightedRuleId] = useState<string | null>(null);
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
+  const [pendingTestCases, setPendingTestCases] = useState<TestCase[]>([]);
+  
+  // Ref to pass test cases to ControllerPanel
+  const controllerPanelRef = useRef<{ importTestCases: (cases: TestCase[]) => void } | null>(null);
 
   // 触发 onChange
   useEffect(() => {
@@ -173,6 +177,11 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
   // 记录用户消息（用于生成备注）
   const handleUserMessage = useCallback((message: string) => {
     setLastUserMessage(message);
+  }, []);
+
+  // 处理测试用例导入
+  const handleImportTestCases = useCallback((cases: TestCase[]) => {
+    setPendingTestCases(cases);
   }, []);
 
   return (
@@ -213,7 +222,11 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
               <AIChat
                 onApplyTable={handleApplyAITable}
                 onUserMessage={handleUserMessage}
+                onImportTestCases={handleImportTestCases}
                 hasExistingData={rules.length > 0}
+                columns={columns}
+                rules={rules}
+                notes={notes}
                 className="h-full"
               />
             </ResizablePanel>
@@ -230,6 +243,8 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
                 onTableChange={handleTableChange}
                 highlightedRuleId={highlightedRuleId}
                 onHighlightRule={setHighlightedRuleId}
+                pendingTestCases={pendingTestCases}
+                onTestCasesImported={() => setPendingTestCases([])}
                 className="h-full"
               />
             </ResizablePanel>

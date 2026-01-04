@@ -1,8 +1,9 @@
 import React from 'react';
-import { ChatMessage as ChatMessageType } from '@/services/aiService';
+import { ChatMessage as ChatMessageType, AIGeneratedTestCase } from '@/services/aiService';
 import { AIGeneratedTable } from '@/services/aiService';
 import { GeneratedTablePreview } from './GeneratedTablePreview';
 import { ColumnConfirmationCard, ConfirmedColumn } from './ColumnConfirmationCard';
+import { TestCasePreviewCard, GeneratedTestCase } from './TestCasePreviewCard';
 import { cn } from '@/lib/utils';
 import { Bot, User, Loader2 } from 'lucide-react';
 
@@ -10,17 +11,22 @@ interface ChatMessageProps {
   message: ChatMessageType;
   onApplyTable: (table: AIGeneratedTable) => void;
   onColumnConfirm?: (inputs: ConfirmedColumn[], outputs: ConfirmedColumn[]) => void;
+  onImportTestCases?: (cases: GeneratedTestCase[]) => void;
   appliedTableId?: string;
+  importedTestCaseMessageId?: string;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onApplyTable,
   onColumnConfirm,
+  onImportTestCases,
   appliedTableId,
+  importedTestCaseMessageId,
 }) => {
   const isUser = message.role === 'user';
   const isApplied = message.generatedTable && appliedTableId === message.generatedTable.meta.code;
+  const isTestCasesImported = importedTestCaseMessageId === message.id;
 
   return (
     <div className={cn(
@@ -84,6 +90,22 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               table={message.generatedTable}
               onApply={onApplyTable}
               isApplied={isApplied}
+            />
+          </div>
+        )}
+
+        {/* 生成的测试用例预览 */}
+        {message.generatedTestCases && message.generatedTestCases.length > 0 && !message.isLoading && onImportTestCases && (
+          <div className={cn(
+            "mt-2",
+            isUser ? "ml-auto" : "mr-auto",
+            "max-w-full"
+          )}>
+            <TestCasePreviewCard
+              testCases={message.generatedTestCases}
+              summary={message.testCaseSummary}
+              onImport={onImportTestCases}
+              isImported={isTestCasesImported}
             />
           </div>
         )}
