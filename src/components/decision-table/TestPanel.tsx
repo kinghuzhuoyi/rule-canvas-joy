@@ -97,37 +97,46 @@ export const TestPanel: React.FC<TestPanelProps> = ({
   };
 
   const runSingleTest = (testCase: TestCase): TestCase => {
-    const result = findMatchingRule(testCase.inputs, columns, rules);
+    try {
+      const result = findMatchingRule(testCase.inputs, columns, rules);
 
-    if (!result.matched) {
+      if (!result.matched) {
+        return {
+          ...testCase,
+          status: 'no-match',
+          actualOutputs: {},
+          matchedRuleId: undefined,
+        };
+      }
+
+      const hasExpected = Object.keys(testCase.expectedOutputs).some(
+        k => testCase.expectedOutputs[k]
+      );
+
+      if (hasExpected) {
+        const comparison = compareOutputs(testCase.expectedOutputs, result.outputs, columns);
+        return {
+          ...testCase,
+          status: comparison.passed ? 'passed' : 'failed',
+          actualOutputs: result.outputs,
+          matchedRuleId: result.rule?.id,
+        };
+      }
+
       return {
         ...testCase,
-        status: 'no-match',
+        status: 'passed',
+        actualOutputs: result.outputs,
+        matchedRuleId: result.rule?.id,
+      };
+    } catch {
+      return {
+        ...testCase,
+        status: 'failed',
         actualOutputs: {},
         matchedRuleId: undefined,
       };
     }
-
-    const hasExpected = Object.keys(testCase.expectedOutputs).some(
-      k => testCase.expectedOutputs[k]
-    );
-
-    if (hasExpected) {
-      const comparison = compareOutputs(testCase.expectedOutputs, result.outputs, columns);
-      return {
-        ...testCase,
-        status: comparison.passed ? 'passed' : 'failed',
-        actualOutputs: result.outputs,
-        matchedRuleId: result.rule?.id,
-      };
-    }
-
-    return {
-      ...testCase,
-      status: 'passed',
-      actualOutputs: result.outputs,
-      matchedRuleId: result.rule?.id,
-    };
   };
 
   const handleRunSingle = () => {
