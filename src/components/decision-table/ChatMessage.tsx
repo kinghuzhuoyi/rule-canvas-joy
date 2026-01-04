@@ -4,6 +4,7 @@ import { AIGeneratedTable } from '@/services/aiService';
 import { GeneratedTablePreview } from './GeneratedTablePreview';
 import { ColumnConfirmationCard, ConfirmedColumn } from './ColumnConfirmationCard';
 import { TestCasePreviewCard, GeneratedTestCase } from './TestCasePreviewCard';
+import { RequirementConfirmCard } from './RequirementConfirmCard';
 import { cn } from '@/lib/utils';
 import { Bot, User, Loader2 } from 'lucide-react';
 
@@ -12,8 +13,11 @@ interface ChatMessageProps {
   onApplyTable: (table: AIGeneratedTable) => void;
   onColumnConfirm?: (inputs: ConfirmedColumn[], outputs: ConfirmedColumn[]) => void;
   onImportTestCases?: (cases: GeneratedTestCase[]) => void;
+  onRequirementConfirm?: () => void;
+  onRequestChange?: () => void;
   appliedTableId?: string;
   importedTestCaseMessageId?: string;
+  isLoading?: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -21,8 +25,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   onApplyTable,
   onColumnConfirm,
   onImportTestCases,
+  onRequirementConfirm,
+  onRequestChange,
   appliedTableId,
   importedTestCaseMessageId,
+  isLoading = false,
 }) => {
   const isUser = message.role === 'user';
   const isApplied = message.generatedTable && appliedTableId === message.generatedTable.meta.code;
@@ -60,9 +67,24 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               <span>{message.content}</span>
             </div>
           ) : (
-            <div className="whitespace-pre-wrap">{message.content}</div>
+            <div className="whitespace-pre-wrap text-left">{message.content}</div>
           )}
         </div>
+
+        {/* 需求确认卡片 */}
+        {message.requiresConfirmation && !message.isConfirmed && !message.isLoading && onRequirementConfirm && onRequestChange && (
+          <div className={cn(
+            "mt-2",
+            isUser ? "ml-auto" : "mr-auto",
+            "max-w-full"
+          )}>
+            <RequirementConfirmCard
+              onConfirm={onRequirementConfirm}
+              onRequestChange={onRequestChange}
+              disabled={isLoading}
+            />
+          </div>
+        )}
 
         {/* 待确认列信息卡片 */}
         {message.pendingConfirmation && !message.isLoading && onColumnConfirm && (

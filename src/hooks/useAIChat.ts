@@ -70,12 +70,20 @@ export function useAIChat(): UseAIChatReturn {
         pendingConfirmation: result.pendingConfirmation,
         generatedTestCases: result.generatedTestCases,
         testCaseSummary: result.testCaseSummary,
+        requiresConfirmation: result.requiresConfirmation,
       };
 
       setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
 
       if (result.table) {
         setLastGeneratedTable(result.table);
+      }
+
+      // 如果用户确认了需求，标记之前的消息为已确认
+      if (content.trim() === '确认' || content.trim() === '确定' || content.trim() === 'OK') {
+        setMessages(prev => prev.map(m => 
+          m.requiresConfirmation ? { ...m, isConfirmed: true } : m
+        ));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '生成失败，请重试';
