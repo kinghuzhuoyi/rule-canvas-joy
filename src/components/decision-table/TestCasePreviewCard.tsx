@@ -72,7 +72,7 @@ export const TestCasePreviewCard: React.FC<TestCasePreviewCardProps> = ({
         )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <ScrollArea className="max-h-64">
+        <ScrollArea className="h-64">
           <div className="space-y-3 pr-2">
             {categoryOrder.map(category => {
               const cases = groupedCases[category];
