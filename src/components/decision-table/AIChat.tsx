@@ -130,11 +130,11 @@ export const AIChat: React.FC<AIChatProps> = ({
       const expectedOutputs: Record<string, string> = {};
 
       columns.forEach(col => {
-        if (col.isInput && tc.inputs[col.name] !== undefined) {
-          inputValues[col.id] = tc.inputs[col.name];
+        if (col.isInput && tc.inputs?.[col.name] !== undefined) {
+          inputValues[col.id] = String(tc.inputs[col.name]);
         }
         if (!col.isInput && tc.expectedOutputs?.[col.name] !== undefined) {
-          expectedOutputs[col.id] = tc.expectedOutputs[col.name];
+          expectedOutputs[col.id] = String(tc.expectedOutputs[col.name]);
         }
       });
 
