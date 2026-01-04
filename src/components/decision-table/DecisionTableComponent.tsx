@@ -137,6 +137,7 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
   const [highlightedRuleId, setHighlightedRuleId] = useState<string | null>(null);
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
   const [pendingTestCases, setPendingTestCases] = useState<TestCase[]>([]);
+  const [testCases, setTestCases] = useState<TestCase[]>([]);
   
   // Ref to pass test cases to ControllerPanel
   const controllerPanelRef = useRef<{ importTestCases: (cases: TestCase[]) => void } | null>(null);
@@ -250,6 +251,8 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
                 onHighlightRule={setHighlightedRuleId}
                 pendingTestCases={pendingTestCases}
                 onTestCasesImported={handleTestCasesImported}
+                testCases={testCases}
+                onTestCasesChange={setTestCases}
                 className="h-full"
               />
             </ResizablePanel>
@@ -273,6 +276,8 @@ export const DecisionTableComponent: React.FC<DecisionTableComponentProps> = ({
                 columns={columns}
                 rules={rules}
                 onHighlightRule={setHighlightedRuleId}
+                testCases={testCases}
+                onTestCasesChange={setTestCases}
                 className="h-full border-l-0"
               />
             </ResizablePanel>

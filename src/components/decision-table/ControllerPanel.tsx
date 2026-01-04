@@ -17,6 +17,8 @@ interface ControllerPanelProps {
   onHighlightRule: (ruleId: string | null) => void;
   pendingTestCases?: TestCase[];
   onTestCasesImported?: () => void;
+  testCases: TestCase[];
+  onTestCasesChange: (cases: TestCase[]) => void;
   className?: string;
   defaultTab?: 'notes' | 'table' | 'test';
 }
@@ -31,6 +33,8 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   onHighlightRule,
   pendingTestCases = [],
   onTestCasesImported,
+  testCases,
+  onTestCasesChange,
   className,
   defaultTab = 'notes',
 }) => {
@@ -106,6 +110,8 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
           onHighlightRule={onHighlightRule}
           pendingImportCases={pendingTestCases}
           onImportComplete={onTestCasesImported}
+          testCases={testCases}
+          onTestCasesChange={onTestCasesChange}
           standalone
           className="h-full border-0"
         />
