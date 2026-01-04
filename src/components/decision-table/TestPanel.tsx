@@ -16,6 +16,8 @@ interface TestPanelProps {
   standalone?: boolean;  // 独立模式（Tab 页内不使用 Collapsible）
   pendingImportCases?: TestCase[];  // 待导入的测试用例（来自 AI 生成）
   onImportComplete?: () => void;  // 导入完成回调
+  testCases?: TestCase[];  // 外部控制的测试用例（受控模式）
+  onTestCasesChange?: (cases: TestCase[]) => void;  // 测试用例变化回调
   className?: string;
 }
 
@@ -26,12 +28,18 @@ export const TestPanel: React.FC<TestPanelProps> = ({
   standalone = false,
   pendingImportCases = [],
   onImportComplete,
+  testCases: externalTestCases,
+  onTestCasesChange,
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [internalTestCases, setInternalTestCases] = useState<TestCase[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // 使用外部或内部测试用例
+  const testCases = externalTestCases ?? internalTestCases;
+  const setTestCases = onTestCasesChange ?? setInternalTestCases;
 
   // 处理待导入的测试用例
   useEffect(() => {

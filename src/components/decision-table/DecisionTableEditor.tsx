@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -78,6 +78,27 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   const { toast } = useToast();
   const [columns, setColumns] = useState<Column[]>(() => initialData?.columns || getDefaultData().columns);
   const [rules, setRules] = useState<Rule[]>(() => initialData?.rules || getDefaultData().rules);
+  
+  // 用于深度比较的 ref
+  const prevColumnsRef = useRef<string>('');
+  const prevRulesRef = useRef<string>('');
+  
+  // 同步外部数据变化
+  useEffect(() => {
+    const columnsStr = JSON.stringify(initialData?.columns);
+    if (initialData?.columns && columnsStr !== prevColumnsRef.current) {
+      prevColumnsRef.current = columnsStr;
+      setColumns(initialData.columns);
+    }
+  }, [initialData?.columns]);
+
+  useEffect(() => {
+    const rulesStr = JSON.stringify(initialData?.rules);
+    if (initialData?.rules && rulesStr !== prevRulesRef.current) {
+      prevRulesRef.current = rulesStr;
+      setRules(initialData.rules);
+    }
+  }, [initialData?.rules]);
   
   const {
     selectedCells,
