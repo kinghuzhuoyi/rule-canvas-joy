@@ -41,6 +41,8 @@ export interface ChatMessage {
   testCaseSummary?: string;
   timestamp: Date;
   isLoading?: boolean;
+  requiresConfirmation?: boolean;  // 是否需要用户确认（需求文档阶段）
+  isConfirmed?: boolean;           // 用户是否已确认
 }
 
 // AI 响应结构
@@ -65,6 +67,7 @@ interface AIResponse {
   testCaseSummary?: string;
   message?: string;
   error?: string;
+  requiresConfirmation?: boolean;
 }
 
 // 将 AI 响应转换为应用数据结构
@@ -127,6 +130,7 @@ export async function generateDecisionTable(
   pendingConfirmation?: PendingConfirmation;
   generatedTestCases?: AIGeneratedTestCase[];
   testCaseSummary?: string;
+  requiresConfirmation?: boolean;
 }> {
   const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-decision-table`;
 
@@ -178,6 +182,7 @@ export async function generateDecisionTable(
       pendingConfirmation: data.pendingConfirmation,
       generatedTestCases: data.generatedTestCases,
       testCaseSummary: data.testCaseSummary,
+      requiresConfirmation: data.requiresConfirmation,
     };
   } catch (error) {
     console.error('AI service error:', error);

@@ -425,11 +425,18 @@ serve(async (req) => {
     // 如果没有工具调用，说明 AI 在进行需求分析或等待确认
     if (!toolCall) {
       const content = data.choices?.[0]?.message?.content || "请描述您想创建的决策表需求。";
+      
+      // 检测是否是需求确认请求
+      const requiresConfirmation = content.includes('请确认以上需求是否正确') || 
+                                   content.includes('确认无误请回复') ||
+                                   content.includes('请回复「确认」');
+      
       return new Response(
         JSON.stringify({
           success: true,
           table: null,
           message: content,
+          requiresConfirmation,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

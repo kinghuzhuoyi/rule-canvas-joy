@@ -119,6 +119,17 @@ export const AIChat: React.FC<AIChatProps> = ({
     sendColumnConfirmation(inputs, outputs);
   }, [sendColumnConfirmation]);
 
+  // 处理需求确认
+  const handleRequirementConfirm = useCallback(() => {
+    sendMessage('确认');
+  }, [sendMessage]);
+
+  // 处理请求修改
+  const handleRequestChange = useCallback(() => {
+    textareaRef.current?.focus();
+    setInput('我需要修改：');
+  }, []);
+
   // 处理测试用例导入
   const handleImportTestCases = useCallback((cases: GeneratedTestCase[], messageId: string) => {
     if (!onImportTestCases) return;
@@ -209,8 +220,11 @@ export const AIChat: React.FC<AIChatProps> = ({
               onApplyTable={handleRequestApply}
               onColumnConfirm={handleColumnConfirm}
               onImportTestCases={(cases) => handleImportTestCases(cases, message.id)}
+              onRequirementConfirm={handleRequirementConfirm}
+              onRequestChange={handleRequestChange}
               appliedTableId={appliedTableCode}
               importedTestCaseMessageId={importedTestCaseMessageId}
+              isLoading={isLoading}
             />
           ))}
         </div>
