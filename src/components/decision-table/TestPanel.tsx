@@ -14,6 +14,8 @@ interface TestPanelProps {
   rules: Rule[];
   onHighlightRule?: (ruleId: string | null) => void;
   standalone?: boolean;  // 独立模式（Tab 页内不使用 Collapsible）
+  pendingImportCases?: TestCase[];  // 待导入的测试用例（来自 AI 生成）
+  onImportComplete?: () => void;  // 导入完成回调
   className?: string;
 }
 
@@ -22,12 +24,26 @@ export const TestPanel: React.FC<TestPanelProps> = ({
   rules,
   onHighlightRule,
   standalone = false,
+  pendingImportCases = [],
+  onImportComplete,
   className,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // 处理待导入的测试用例
+  useEffect(() => {
+    if (pendingImportCases.length > 0) {
+      setTestCases(prev => [...prev, ...pendingImportCases]);
+      // 选中第一个导入的用例
+      if (pendingImportCases[0]) {
+        setSelectedCaseId(pendingImportCases[0].id);
+      }
+      onImportComplete?.();
+    }
+  }, [pendingImportCases, onImportComplete]);
 
   const selectedCase = useMemo(
     () => testCases.find(c => c.id === selectedCaseId) || null,

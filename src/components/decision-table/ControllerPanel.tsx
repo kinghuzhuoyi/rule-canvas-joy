@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { FileText, Table2, TestTube2 } from 'lucide-react';
-import { Column, Rule } from './types';
+import { Column, Rule, TestCase } from './types';
 import { NotesEditor } from './NotesEditor';
 import { DecisionTableEditor } from './DecisionTableEditor';
 import { TestPanel } from './TestPanel';
@@ -15,6 +15,8 @@ interface ControllerPanelProps {
   onTableChange: (data: { columns: Column[]; rules: Rule[] }) => void;
   highlightedRuleId: string | null;
   onHighlightRule: (ruleId: string | null) => void;
+  pendingTestCases?: TestCase[];
+  onTestCasesImported?: () => void;
   className?: string;
   defaultTab?: 'notes' | 'table' | 'test';
 }
@@ -27,10 +29,19 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   onTableChange,
   highlightedRuleId,
   onHighlightRule,
+  pendingTestCases = [],
+  onTestCasesImported,
   className,
   defaultTab = 'notes',
 }) => {
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
+
+  // 当有待导入的测试用例时，自动切换到测试 Tab
+  useEffect(() => {
+    if (pendingTestCases.length > 0) {
+      setActiveTab('test');
+    }
+  }, [pendingTestCases]);
 
   return (
     <Tabs 
@@ -61,6 +72,11 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
           >
             <TestTube2 className="h-3.5 w-3.5" />
             测试
+            {pendingTestCases.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
+                {pendingTestCases.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
       </div>
@@ -88,6 +104,8 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
           columns={columns}
           rules={rules}
           onHighlightRule={onHighlightRule}
+          pendingImportCases={pendingTestCases}
+          onImportComplete={onTestCasesImported}
           standalone
           className="h-full border-0"
         />

@@ -21,6 +21,15 @@ export interface PendingConfirmation {
   outputs?: PendingColumn[];
 }
 
+// AI 生成的测试用例
+export interface AIGeneratedTestCase {
+  name: string;
+  description?: string;
+  category: 'normal' | 'boundary' | 'missing' | 'invalid';
+  inputs: Record<string, string>;
+  expectedOutputs?: Record<string, string>;
+}
+
 // 聊天消息
 export interface ChatMessage {
   id: string;
@@ -28,6 +37,8 @@ export interface ChatMessage {
   content: string;
   generatedTable?: AIGeneratedTable;
   pendingConfirmation?: PendingConfirmation;
+  generatedTestCases?: AIGeneratedTestCase[];
+  testCaseSummary?: string;
   timestamp: Date;
   isLoading?: boolean;
 }
@@ -50,6 +61,8 @@ interface AIResponse {
     rules: Array<Record<string, string>>;
   };
   pendingConfirmation?: PendingConfirmation;
+  generatedTestCases?: AIGeneratedTestCase[];
+  testCaseSummary?: string;
   message?: string;
   error?: string;
 }
@@ -108,7 +121,13 @@ function transformAIResponse(response: AIResponse): AIGeneratedTable | null {
 export async function generateDecisionTable(
   userMessage: string,
   conversationHistory: ChatMessage[]
-): Promise<{ table: AIGeneratedTable | null; message: string; pendingConfirmation?: PendingConfirmation }> {
+): Promise<{ 
+  table: AIGeneratedTable | null; 
+  message: string; 
+  pendingConfirmation?: PendingConfirmation;
+  generatedTestCases?: AIGeneratedTestCase[];
+  testCaseSummary?: string;
+}> {
   const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-decision-table`;
 
   // 构建消息历史
@@ -157,6 +176,8 @@ export async function generateDecisionTable(
       table,
       message: data.message || (table ? `已生成决策表：${table.meta.name}` : '无法解析生成结果'),
       pendingConfirmation: data.pendingConfirmation,
+      generatedTestCases: data.generatedTestCases,
+      testCaseSummary: data.testCaseSummary,
     };
   } catch (error) {
     console.error('AI service error:', error);

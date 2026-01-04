@@ -33,6 +33,20 @@ const systemPrompt = `你是一个决策表设计专家。根据用户的描述�
   ]
 }
 
+### generate_test_cases 工具使用规则
+当用户请求生成测试用例时（如点击"测试用例生成"按钮），【必须】调用 generate_test_cases 工具。
+
+测试用例生成策略：
+1. **常规用例 (normal)**：每条规则生成至少一个典型输入用例，覆盖所有规则分支
+2. **边界值用例 (boundary)**：
+   - 区间表达式的边界点：如 (0,100] 生成 0（不含边界）、1（最小含边界）、100（最大含边界）、101（超出边界）
+   - [500,+inf) 生成 499（不含）、500（含边界）
+   - 字符串枚举测试第一个和最后一个值
+3. **缺失值用例 (missing)**：关键输入为空/未提供的情况
+4. **无效值用例 (invalid)**：不在任何规则范围内的输入组合
+
+【重要】测试用例的 inputs 和 expectedOutputs 使用列的 name 作为 key。
+
 ## 交互规则
 
 ### 第一阶段：需求分析与确认
@@ -44,6 +58,9 @@ const systemPrompt = `你是一个决策表设计专家。根据用户的描述�
 ### 第二阶段：生成决策表
 仅当用户回复包含以下确认词时，才调用 create_decision_table 工具：
 - 确认、确定、可以、没问题、正确、对的、好的、OK、ok、生成、应用
+
+### 测试用例生成阶段
+当用户明确请求生成测试用例时（消息包含"生成测试用例"或来自系统的测试用例请求），调用 generate_test_cases 工具。
 
 ### 多轮对话处理
 - 如果用户有补充或修改，重新整理需求文档，不要调用工具
@@ -297,6 +314,58 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "generate_test_cases",
+      description: `根据决策表的规则结构生成测试用例，覆盖常规条件、边界值、缺失值、无效值等多种场景。
+
+当用户请求生成测试用例时调用此工具。输入和输出使用列的 name（编码）作为 key。`,
+      parameters: {
+        type: "object",
+        properties: {
+          testCases: {
+            type: "array",
+            description: "生成的测试用例数组",
+            items: {
+              type: "object",
+              properties: {
+                name: { 
+                  type: "string", 
+                  description: "测试用例名称，如 'TC01: 高信用高收入'" 
+                },
+                description: { 
+                  type: "string", 
+                  description: "测试场景说明" 
+                },
+                category: { 
+                  type: "string", 
+                  enum: ["normal", "boundary", "missing", "invalid"],
+                  description: "测试类别：normal-常规用例，boundary-边界值，missing-缺失值，invalid-无效值" 
+                },
+                inputs: { 
+                  type: "object", 
+                  description: "输入值对象，key 是输入列的 name，value 是测试值",
+                  additionalProperties: { type: "string" }
+                },
+                expectedOutputs: { 
+                  type: "object", 
+                  description: "预期输出值对象，key 是输出列的 name，value 是预期值（可选，无匹配时留空）",
+                  additionalProperties: { type: "string" }
+                }
+              },
+              required: ["name", "category", "inputs"]
+            }
+          },
+          summary: { 
+            type: "string", 
+            description: "测试用例生成摘要，说明覆盖情况" 
+          }
+        },
+        required: ["testCases", "summary"]
+      },
+    },
+  },
 ];
 
 serve(async (req) => {
@@ -382,6 +451,25 @@ serve(async (req) => {
             inputs: confirmationArgs.inputs || [],
             outputs: confirmationArgs.outputs || [],
           },
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // 处理测试用例生成工具调用
+    if (toolCall.function.name === "generate_test_cases") {
+      const testCaseArgs = JSON.parse(toolCall.function.arguments);
+      console.log("Test cases generated:", JSON.stringify(testCaseArgs).slice(0, 1000));
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          table: null,
+          message: testCaseArgs.summary || `已生成 ${testCaseArgs.testCases?.length || 0} 个测试用例`,
+          generatedTestCases: testCaseArgs.testCases || [],
+          testCaseSummary: testCaseArgs.summary,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
