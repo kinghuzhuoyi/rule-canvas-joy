@@ -48,9 +48,17 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 用于防止重复处理的 ref
+  const processedOperationRef = useRef<string | null>(null);
+
   // 处理 AI 返回的表操作
   useEffect(() => {
     if (!lastTableOperation) return;
+    
+    // 生成操作的唯一标识，防止重复处理
+    const operationKey = `${lastTableOperation.type}-${JSON.stringify(lastTableOperation.data?.table?.meta?.code || lastTableOperation.data?.tableId || '')}`;
+    if (processedOperationRef.current === operationKey) return;
+    processedOperationRef.current = operationKey;
     
     const { type, data } = lastTableOperation;
     
