@@ -80,26 +80,28 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
   // 获取当前活动表
   const activeTable = tables.find(t => t.id === activeTableId) || null;
 
-  // 创建新表
+  // 创建新表 - 使用 setState 回调获取最新长度，避免依赖 tables.length
   const createTable = useCallback((data?: Partial<Omit<DecisionTableState, 'id'>>): string => {
     const newId = generateId();
     const newColumns = data?.columns || getDefaultColumns();
     const newRules = data?.rules || getDefaultRules(newColumns);
     
-    const newTable: DecisionTableState = {
-      id: newId,
-      meta: data?.meta || getDefaultMeta(tables.length + 1),
-      columns: newColumns,
-      rules: newRules,
-      notes: data?.notes || '',
-      testCases: data?.testCases || [],
-    };
+    setTables(prev => {
+      const newTable: DecisionTableState = {
+        id: newId,
+        meta: data?.meta || getDefaultMeta(prev.length + 1),
+        columns: newColumns,
+        rules: newRules,
+        notes: data?.notes || '',
+        testCases: data?.testCases || [],
+      };
+      return [...prev, newTable];
+    });
     
-    setTables(prev => [...prev, newTable]);
     setActiveTableId(newId);
     
     return newId;
-  }, [tables.length]);
+  }, []);
 
   // 更新表
   const updateTable = useCallback((id: string, updates: Partial<Omit<DecisionTableState, 'id'>>) => {
