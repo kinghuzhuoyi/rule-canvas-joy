@@ -3,6 +3,9 @@ import { DecisionTableState } from '@/contexts/DecisionTableContext';
 import { 
   ChatMessage, 
   AIGeneratedTable, 
+  ExecutionPlan,
+  PlanStep,
+  StepExecutionResult,
   generateDecisionTable, 
   generateMessageId, 
   formatColumnConfirmation 
@@ -34,12 +37,19 @@ interface UseGlobalAIChatReturn {
   clearMessages: () => void;
   lastGeneratedTable: AIGeneratedTable | null;
   lastTableOperation: TableOperation | null;
+  // Plan+ReAct 相关
+  currentPlan: ExecutionPlan | null;
+  confirmPlan: (context: string, activeTable?: DecisionTableState | null) => Promise<void>;
+  modifyPlan: () => void;
+  pauseExecution: () => void;
+  resumeExecution: (context: string, activeTable?: DecisionTableState | null) => Promise<void>;
+  skipStep: (context: string, activeTable?: DecisionTableState | null) => Promise<void>;
 }
 
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: '你好！我是全局决策表助手 🤖\n\n我可以帮你管理多个决策表：\n- **创建新表**："创建一个信用评分决策表"\n- **修改当前表**："添加一个年龄输入列"\n- **切换表**："切换到 DT_001"\n- **生成测试用例**：点击下方按钮\n\n请告诉我你想做什么？',
+  content: '你好！我是全局决策表助手 🤖\n\n我可以帮你管理多个决策表：\n- **创建新表**："创建一个信用评分决策表"\n- **修改当前表**："添加一个年龄输入列"\n- **切换表**："切换到 DT_001"\n- **生成测试用例**：点击下方按钮\n\n对于复杂任务，我会先制定执行计划供您确认后再逐步执行。',
   timestamp: new Date(),
 };
 
@@ -49,6 +59,158 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
   const [error, setError] = useState<string | null>(null);
   const [lastGeneratedTable, setLastGeneratedTable] = useState<AIGeneratedTable | null>(null);
   const [lastTableOperation, setLastTableOperation] = useState<TableOperation | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<ExecutionPlan | null>(null);
+
+  // 更新计划中某个步骤的状态
+  const updatePlanStep = useCallback((
+    stepIndex: number, 
+    updates: Partial<PlanStep>
+  ) => {
+    setCurrentPlan(prev => {
+      if (!prev) return null;
+      const newSteps = [...prev.steps];
+      newSteps[stepIndex] = { ...newSteps[stepIndex], ...updates };
+      return { ...prev, steps: newSteps };
+    });
+  }, []);
+
+  // 执行下一步
+  const executeNextStep = useCallback(async (
+    context: string,
+    activeTable?: DecisionTableState | null
+  ) => {
+    if (!currentPlan || currentPlan.status === 'completed') return;
+
+    const stepIndex = currentPlan.currentStepIndex;
+    const step = currentPlan.steps[stepIndex];
+    
+    if (!step) {
+      setCurrentPlan(prev => prev ? { ...prev, status: 'completed' } : null);
+      return;
+    }
+
+    // 标记当前步骤为运行中
+    updatePlanStep(stepIndex, { status: 'running' });
+    setCurrentPlan(prev => prev ? { ...prev, status: 'executing' } : null);
+
+    // 构建步骤执行消息
+    const stepMessage = `[执行步骤 ${stepIndex + 1}/${currentPlan.steps.length}: ${step.title}]\n${step.description}`;
+    
+    const loadingMessage: ChatMessage = {
+      id: generateMessageId(),
+      role: 'assistant',
+      content: `正在执行步骤 ${stepIndex + 1}：${step.title}...`,
+      timestamp: new Date(),
+      isLoading: true,
+    };
+
+    setMessages(prev => [...prev, loadingMessage]);
+    setIsLoading(true);
+
+    try {
+      const enrichedContent = buildEnrichedMessage(stepMessage, context, activeTable);
+      const history = messages.filter(m => m.id !== 'welcome' && !m.isLoading);
+      
+      const result = await generateDecisionTable(
+        enrichedContent, 
+        history,
+        { planId: currentPlan.id, stepIndex }
+      );
+
+      // 处理步骤执行结果
+      if (result.stepExecution) {
+        const { thought, action, observation, status } = result.stepExecution;
+        
+        updatePlanStep(stepIndex, {
+          status: status === 'completed' ? 'completed' : 
+                  status === 'need_input' ? 'need_input' : 'failed',
+          thought,
+          action,
+          observation,
+        });
+
+        const assistantMessage: ChatMessage = {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: result.message,
+          timestamp: new Date(),
+          stepExecution: result.stepExecution,
+          generatedTable: result.table || undefined,
+          pendingConfirmation: result.pendingConfirmation,
+          generatedTestCases: result.generatedTestCases,
+          testCaseSummary: result.testCaseSummary,
+        };
+
+        setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
+
+        if (result.table) {
+          setLastGeneratedTable(result.table);
+          setLastTableOperation({ type: 'create', data: { table: result.table } });
+        }
+
+        // 如果步骤完成，移动到下一步
+        if (status === 'completed') {
+          const nextIndex = stepIndex + 1;
+          if (nextIndex >= currentPlan.steps.length) {
+            setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
+          } else {
+            setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
+            // 自动执行下一步（如果不需要用户输入）
+            // 这里暂时不自动执行，让用户点击继续
+          }
+        } else if (status === 'need_input') {
+          // 等待用户输入
+          setCurrentPlan(prev => prev ? { ...prev, status: 'paused' } : null);
+        }
+      } else {
+        // 没有步骤执行结果，使用消息内容
+        const assistantMessage: ChatMessage = {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: result.message,
+          timestamp: new Date(),
+          generatedTable: result.table || undefined,
+          pendingConfirmation: result.pendingConfirmation,
+          generatedTestCases: result.generatedTestCases,
+          testCaseSummary: result.testCaseSummary,
+          requiresConfirmation: result.requiresConfirmation,
+        };
+
+        setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
+
+        if (result.table) {
+          setLastGeneratedTable(result.table);
+          setLastTableOperation({ type: 'create', data: { table: result.table } });
+        }
+
+        // 标记步骤完成并移动到下一步
+        updatePlanStep(stepIndex, { status: 'completed' });
+        const nextIndex = stepIndex + 1;
+        if (nextIndex >= currentPlan.steps.length) {
+          setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
+        } else {
+          setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '执行失败';
+      setError(errorMessage);
+
+      updatePlanStep(stepIndex, { status: 'failed' });
+      setCurrentPlan(prev => prev ? { ...prev, status: 'paused' } : null);
+
+      const errorResponse: ChatMessage = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: `步骤 ${stepIndex + 1} 执行失败：${errorMessage}`,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPlan, messages, updatePlanStep]);
 
   const sendMessage = useCallback(async (
     content: string, 
@@ -85,36 +247,52 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
       const history = messages.filter(m => m.id !== 'welcome' && !m.isLoading);
       const result = await generateDecisionTable(enrichedContent, history);
 
-      const assistantMessage: ChatMessage = {
-        id: generateMessageId(),
-        role: 'assistant',
-        content: result.message,
-        timestamp: new Date(),
-        generatedTable: result.table || undefined,
-        pendingConfirmation: result.pendingConfirmation,
-        generatedTestCases: result.generatedTestCases,
-        testCaseSummary: result.testCaseSummary,
-        requiresConfirmation: result.requiresConfirmation,
-      };
+      // 检查是否返回了执行计划
+      if (result.executionPlan) {
+        setCurrentPlan(result.executionPlan);
+        
+        const planMessage: ChatMessage = {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: result.message,
+          timestamp: new Date(),
+          executionPlan: result.executionPlan,
+          isPlanConfirmation: true,
+        };
 
-      setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
+        setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), planMessage]);
+      } else {
+        const assistantMessage: ChatMessage = {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: result.message,
+          timestamp: new Date(),
+          generatedTable: result.table || undefined,
+          pendingConfirmation: result.pendingConfirmation,
+          generatedTestCases: result.generatedTestCases,
+          testCaseSummary: result.testCaseSummary,
+          requiresConfirmation: result.requiresConfirmation,
+        };
 
-      if (result.table) {
-        setLastGeneratedTable(result.table);
-        // 检测是否是创建新表的操作
-        if (content.includes('创建') || content.includes('新建') || content.includes('生成')) {
-          setLastTableOperation({
-            type: 'create',
-            data: { table: result.table },
-          });
+        setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
+
+        if (result.table) {
+          setLastGeneratedTable(result.table);
+          // 检测是否是创建新表的操作
+          if (content.includes('创建') || content.includes('新建') || content.includes('生成')) {
+            setLastTableOperation({
+              type: 'create',
+              data: { table: result.table },
+            });
+          }
         }
-      }
 
-      // 处理确认消息
-      if (content.trim() === '确认' || content.trim() === '确定' || content.trim() === 'OK') {
-        setMessages(prev => prev.map(m => 
-          m.requiresConfirmation ? { ...m, isConfirmed: true } : m
-        ));
+        // 处理确认消息
+        if (content.trim() === '确认' || content.trim() === '确定' || content.trim() === 'OK') {
+          setMessages(prev => prev.map(m => 
+            m.requiresConfirmation ? { ...m, isConfirmed: true } : m
+          ));
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '生成失败，请重试';
@@ -137,6 +315,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     setMessages([WELCOME_MESSAGE]);
     setLastGeneratedTable(null);
     setLastTableOperation(null);
+    setCurrentPlan(null);
     setError(null);
   }, []);
 
@@ -190,6 +369,68 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     await sendMessage(tableDescription, context);
   }, [sendMessage, isLoading]);
 
+  // 确认计划并开始执行
+  const confirmPlan = useCallback(async (
+    context: string,
+    activeTable?: DecisionTableState | null
+  ) => {
+    if (!currentPlan) return;
+
+    setCurrentPlan(prev => prev ? { ...prev, status: 'executing' } : null);
+    
+    // 添加确认消息
+    const confirmMessage: ChatMessage = {
+      id: generateMessageId(),
+      role: 'user',
+      content: '确认执行计划',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, confirmMessage]);
+
+    // 开始执行第一步
+    await executeNextStep(context, activeTable);
+  }, [currentPlan, executeNextStep]);
+
+  // 修改计划
+  const modifyPlan = useCallback(() => {
+    setCurrentPlan(null);
+    // 聚焦输入框让用户修改
+  }, []);
+
+  // 暂停执行
+  const pauseExecution = useCallback(() => {
+    setCurrentPlan(prev => prev ? { ...prev, status: 'paused' } : null);
+  }, []);
+
+  // 继续执行
+  const resumeExecution = useCallback(async (
+    context: string,
+    activeTable?: DecisionTableState | null
+  ) => {
+    if (!currentPlan) return;
+    await executeNextStep(context, activeTable);
+  }, [currentPlan, executeNextStep]);
+
+  // 跳过当前步骤
+  const skipStep = useCallback(async (
+    context: string,
+    activeTable?: DecisionTableState | null
+  ) => {
+    if (!currentPlan) return;
+
+    const stepIndex = currentPlan.currentStepIndex;
+    updatePlanStep(stepIndex, { status: 'skipped' });
+
+    const nextIndex = stepIndex + 1;
+    if (nextIndex >= currentPlan.steps.length) {
+      setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
+    } else {
+      setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
+      // 执行下一步
+      await executeNextStep(context, activeTable);
+    }
+  }, [currentPlan, updatePlanStep, executeNextStep]);
+
   return {
     messages,
     isLoading,
@@ -200,6 +441,12 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     clearMessages,
     lastGeneratedTable,
     lastTableOperation,
+    currentPlan,
+    confirmPlan,
+    modifyPlan,
+    pauseExecution,
+    resumeExecution,
+    skipStep,
   };
 }
 

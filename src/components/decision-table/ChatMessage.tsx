@@ -5,6 +5,9 @@ import { GeneratedTablePreview } from './GeneratedTablePreview';
 import { ColumnConfirmationCard, ConfirmedColumn } from './ColumnConfirmationCard';
 import { TestCasePreviewCard, GeneratedTestCase } from './TestCasePreviewCard';
 import { RequirementConfirmCard } from './RequirementConfirmCard';
+import { PlanConfirmCard } from './PlanConfirmCard';
+import { StepExecutionCard } from './StepExecutionCard';
+import { ExecutionPlan } from '@/services/aiService';
 import { cn } from '@/lib/utils';
 import { Bot, User, Loader2 } from 'lucide-react';
 
@@ -15,6 +18,13 @@ interface ChatMessageProps {
   onImportTestCases?: (cases: GeneratedTestCase[]) => void;
   onRequirementConfirm?: () => void;
   onRequestChange?: () => void;
+  // Plan+ReAct 回调
+  onConfirmPlan?: () => void;
+  onModifyPlan?: () => void;
+  onContinueExecution?: () => void;
+  onSkipStep?: () => void;
+  onPauseExecution?: () => void;
+  currentPlan?: ExecutionPlan | null;
   appliedTableId?: string;
   importedTestCaseMessageId?: string;
   isLoading?: boolean;
@@ -27,6 +37,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   onImportTestCases,
   onRequirementConfirm,
   onRequestChange,
+  onConfirmPlan,
+  onModifyPlan,
+  onContinueExecution,
+  onSkipStep,
+  onPauseExecution,
+  currentPlan,
   appliedTableId,
   importedTestCaseMessageId,
   isLoading = false,
@@ -70,6 +86,40 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             <div className="whitespace-pre-wrap text-left">{message.content}</div>
           )}
         </div>
+
+        {/* 计划确认卡片 */}
+        {message.isPlanConfirmation && message.executionPlan && onConfirmPlan && onModifyPlan && (
+          <div className={cn(
+            "mt-2",
+            isUser ? "ml-auto" : "mr-auto",
+            "max-w-full"
+          )}>
+            <PlanConfirmCard
+              plan={message.executionPlan}
+              onConfirm={onConfirmPlan}
+              onModify={onModifyPlan}
+              disabled={isLoading}
+            />
+          </div>
+        )}
+
+        {/* 步骤执行卡片 - 显示当前正在执行的计划 */}
+        {currentPlan && currentPlan.status === 'executing' && message.stepExecution && 
+         onContinueExecution && onSkipStep && onPauseExecution && (
+          <div className={cn(
+            "mt-2",
+            isUser ? "ml-auto" : "mr-auto",
+            "max-w-full"
+          )}>
+            <StepExecutionCard
+              plan={currentPlan}
+              onContinue={onContinueExecution}
+              onSkip={onSkipStep}
+              onPause={onPauseExecution}
+              disabled={isLoading}
+            />
+          </div>
+        )}
 
         {/* 需求确认卡片 */}
         {message.requiresConfirmation && !message.isConfirmed && !message.isLoading && onRequirementConfirm && onRequestChange && (
