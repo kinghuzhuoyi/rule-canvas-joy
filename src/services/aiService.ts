@@ -30,6 +30,57 @@ export interface AIGeneratedTestCase {
   expectedOutputs?: Record<string, string>;
 }
 
+// ============ Plan+ReAct 相关类型 ============
+
+// 计划步骤状态
+export type PlanStepStatus = 'pending' | 'running' | 'completed' | 'skipped' | 'failed' | 'need_input';
+
+// 计划步骤工具类型
+export type PlanStepTool = 
+  | 'analyze_requirement' 
+  | 'request_column_confirmation' 
+  | 'design_rules' 
+  | 'create_decision_table' 
+  | 'generate_test_cases' 
+  | 'validate_rules';
+
+// 计划步骤
+export interface PlanStep {
+  id: string;
+  index: number;
+  title: string;
+  description: string;
+  status: PlanStepStatus;
+  toolToCall?: PlanStepTool;
+  thought?: string;    // 推理过程
+  action?: string;     // 执行动作
+  observation?: string; // 执行结果
+}
+
+// 执行计划状态
+export type ExecutionPlanStatus = 'planning' | 'confirming' | 'executing' | 'paused' | 'completed' | 'failed';
+
+// 执行计划
+export interface ExecutionPlan {
+  id: string;
+  goal: string;
+  steps: PlanStep[];
+  currentStepIndex: number;
+  status: ExecutionPlanStatus;
+}
+
+// 步骤执行结果（来自 AI 的 report_step_result）
+export interface StepExecutionResult {
+  stepIndex: number;
+  thought: string;
+  action: string;
+  observation: string;
+  status: 'completed' | 'failed' | 'need_input';
+  result?: any;
+}
+
+// ============ 聊天消息类型 ============
+
 // 聊天消息
 export interface ChatMessage {
   id: string;
@@ -43,6 +94,10 @@ export interface ChatMessage {
   isLoading?: boolean;
   requiresConfirmation?: boolean;  // 是否需要用户确认（需求文档阶段）
   isConfirmed?: boolean;           // 用户是否已确认
+  // Plan+ReAct 相关
+  executionPlan?: ExecutionPlan;   // 关联的执行计划
+  stepExecution?: StepExecutionResult; // 步骤执行详情
+  isPlanConfirmation?: boolean;    // 是否是计划确认消息
 }
 
 // AI 响应结构
@@ -68,6 +123,16 @@ interface AIResponse {
   message?: string;
   error?: string;
   requiresConfirmation?: boolean;
+  // Plan+ReAct 相关
+  executionPlan?: {
+    goal: string;
+    steps: Array<{
+      title: string;
+      description: string;
+      toolToCall?: PlanStepTool;
+    }>;
+  };
+  stepExecution?: StepExecutionResult;
 }
 
 // 将 AI 响应转换为应用数据结构
@@ -120,10 +185,35 @@ function transformAIResponse(response: AIResponse): AIGeneratedTable | null {
   };
 }
 
+// 将 AI 响应转换为执行计划
+function transformExecutionPlan(response: AIResponse): ExecutionPlan | null {
+  if (!response.executionPlan) {
+    return null;
+  }
+
+  const { goal, steps } = response.executionPlan;
+
+  return {
+    id: generateId(),
+    goal,
+    steps: steps.map((step, index) => ({
+      id: generateId(),
+      index,
+      title: step.title,
+      description: step.description,
+      status: 'pending' as PlanStepStatus,
+      toolToCall: step.toolToCall,
+    })),
+    currentStepIndex: 0,
+    status: 'confirming',
+  };
+}
+
 // 调用 Edge Function 生成决策表
 export async function generateDecisionTable(
   userMessage: string,
-  conversationHistory: ChatMessage[]
+  conversationHistory: ChatMessage[],
+  planContext?: { planId: string; stepIndex: number }
 ): Promise<{ 
   table: AIGeneratedTable | null; 
   message: string; 
@@ -131,6 +221,8 @@ export async function generateDecisionTable(
   generatedTestCases?: AIGeneratedTestCase[];
   testCaseSummary?: string;
   requiresConfirmation?: boolean;
+  executionPlan?: ExecutionPlan;
+  stepExecution?: StepExecutionResult;
 }> {
   const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-decision-table`;
 
@@ -152,7 +244,10 @@ export async function generateDecisionTable(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ 
+        messages,
+        planContext, // 传递计划上下文
+      }),
     });
 
     if (!response.ok) {
@@ -175,6 +270,7 @@ export async function generateDecisionTable(
     }
 
     const table = transformAIResponse(data);
+    const executionPlan = transformExecutionPlan(data);
     
     return {
       table,
@@ -183,6 +279,8 @@ export async function generateDecisionTable(
       generatedTestCases: data.generatedTestCases,
       testCaseSummary: data.testCaseSummary,
       requiresConfirmation: data.requiresConfirmation,
+      executionPlan,
+      stepExecution: data.stepExecution,
     };
   } catch (error) {
     console.error('AI service error:', error);

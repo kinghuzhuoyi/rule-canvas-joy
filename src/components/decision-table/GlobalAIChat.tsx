@@ -9,6 +9,7 @@ import { ApplyConfirmDialog } from './ApplyConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { Send, Trash2, Sparkles, FlaskConical, AlertCircle, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TestCase, generateId } from './types';
@@ -37,6 +38,13 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
     sendTestCaseRequest, 
     clearMessages,
     lastTableOperation,
+    // Plan+ReAct
+    currentPlan,
+    confirmPlan,
+    modifyPlan,
+    pauseExecution,
+    resumeExecution,
+    skipStep,
   } = useGlobalAIChat();
   
   const [input, setInput] = useState('');
@@ -206,6 +214,32 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
     toast.success(`已导入 ${testCases.length} 个测试用例`);
   }, [activeTable, updateTable]);
 
+  // Plan+ReAct 回调
+  const handleConfirmPlan = useCallback(() => {
+    const context = getTableSummary();
+    confirmPlan(context, activeTable);
+  }, [confirmPlan, getTableSummary, activeTable]);
+
+  const handleModifyPlan = useCallback(() => {
+    modifyPlan();
+    textareaRef.current?.focus();
+    setInput('我需要修改计划：');
+  }, [modifyPlan]);
+
+  const handleContinueExecution = useCallback(() => {
+    const context = getTableSummary();
+    resumeExecution(context, activeTable);
+  }, [resumeExecution, getTableSummary, activeTable]);
+
+  const handleSkipStep = useCallback(() => {
+    const context = getTableSummary();
+    skipStep(context, activeTable);
+  }, [skipStep, getTableSummary, activeTable]);
+
+  const handlePauseExecution = useCallback(() => {
+    pauseExecution();
+  }, [pauseExecution]);
+
   // 功能按钮配置
   const actionButtons = [
     { 
@@ -245,6 +279,11 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
     }
   };
 
+  // 计算计划执行进度
+  const planProgress = currentPlan ? 
+    (currentPlan.steps.filter(s => s.status === 'completed' || s.status === 'skipped').length / currentPlan.steps.length) * 100 
+    : 0;
+
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       {/* 头部 */}
@@ -268,6 +307,21 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
         </div>
       </div>
 
+      {/* 执行进度条 */}
+      {currentPlan && currentPlan.status === 'executing' && (
+        <div className="px-4 py-2 bg-primary/5 border-b border-border">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-muted-foreground">
+              执行计划：{currentPlan.goal}
+            </span>
+            <span className="text-xs text-primary font-medium">
+              {Math.round(planProgress)}%
+            </span>
+          </div>
+          <Progress value={planProgress} className="h-1" />
+        </div>
+      )}
+
       {/* 当前表提示 */}
       {activeTable && (
         <div className="px-4 py-2 bg-muted/30 border-b border-border">
@@ -290,6 +344,12 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
               onImportTestCases={(cases) => handleImportTestCases(cases, message.id)}
               onRequirementConfirm={handleRequirementConfirm}
               onRequestChange={handleRequestChange}
+              onConfirmPlan={handleConfirmPlan}
+              onModifyPlan={handleModifyPlan}
+              onContinueExecution={handleContinueExecution}
+              onSkipStep={handleSkipStep}
+              onPauseExecution={handlePauseExecution}
+              currentPlan={currentPlan}
               appliedTableId={appliedTableCode}
               importedTestCaseMessageId={importedTestCaseMessageId}
               isLoading={isLoading}
