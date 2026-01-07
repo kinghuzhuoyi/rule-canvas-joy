@@ -163,8 +163,8 @@ export const GlobalAIChat: React.FC<GlobalAIChatProps> = ({ className }) => {
   // 处理列确认
   const handleColumnConfirm = useCallback((inputs: ConfirmedColumn[], outputs: ConfirmedColumn[]) => {
     const context = getTableSummary();
-    sendColumnConfirmation(inputs, outputs, context);
-  }, [sendColumnConfirmation, getTableSummary]);
+    sendColumnConfirmation(inputs, outputs, context, activeTable);
+  }, [sendColumnConfirmation, getTableSummary, activeTable]);
 
   // 处理需求确认
   const handleRequirementConfirm = useCallback(() => {
