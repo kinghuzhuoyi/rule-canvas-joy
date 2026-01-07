@@ -454,35 +454,20 @@ serve(async (req) => {
     if (functionName === "report_step_result") {
       console.log("Step result:", JSON.stringify(functionArgs).slice(0, 500));
       
-      // 检查是否 status 为 need_input 且 result 中包含列信息
-      const result = functionArgs.result || {};
-      const hasColumnInfo = result.inputs || result.outputs;
-      const needsColumnConfirmation = functionArgs.status === 'need_input' && hasColumnInfo;
-      
-      const responseData: any = {
-        success: true,
-        table: null,
-        message: functionArgs.observation,
-        stepExecution: {
-          stepIndex: functionArgs.stepIndex,
-          thought: functionArgs.thought,
-          action: functionArgs.action,
-          observation: functionArgs.observation,
-          status: functionArgs.status,
-          result: functionArgs.result,
-        },
-      };
-      
-      // 如果需要列确认，添加 pendingConfirmation
-      if (needsColumnConfirmation) {
-        responseData.pendingConfirmation = {
-          inputs: result.inputs || [],
-          outputs: result.outputs || [],
-        };
-      }
-      
       return new Response(
-        JSON.stringify(responseData),
+        JSON.stringify({
+          success: true,
+          table: null,
+          message: functionArgs.observation,
+          stepExecution: {
+            stepIndex: functionArgs.stepIndex,
+            thought: functionArgs.thought,
+            action: functionArgs.action,
+            observation: functionArgs.observation,
+            status: functionArgs.status,
+            result: functionArgs.result,
+          },
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { DecisionTableState } from '@/contexts/DecisionTableContext';
 import { 
   ChatMessage, 
@@ -61,10 +61,6 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
   const [lastGeneratedTable, setLastGeneratedTable] = useState<AIGeneratedTable | null>(null);
   const [lastTableOperation, setLastTableOperation] = useState<TableOperation | null>(null);
   const [currentPlan, setCurrentPlan] = useState<ExecutionPlan | null>(null);
-  
-  // 使用 ref 来避免 stale closure 问题
-  const currentPlanRef = useRef<ExecutionPlan | null>(null);
-  currentPlanRef.current = currentPlan;
 
   // 更新计划中某个步骤的状态
   const updatePlanStep = useCallback((
@@ -84,11 +80,10 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     context: string,
     activeTable?: DecisionTableState | null
   ) => {
-    const plan = currentPlanRef.current;
-    if (!plan || plan.status === 'completed') return;
+    if (!currentPlan || currentPlan.status === 'completed') return;
 
-    const stepIndex = plan.currentStepIndex;
-    const step = plan.steps[stepIndex];
+    const stepIndex = currentPlan.currentStepIndex;
+    const step = currentPlan.steps[stepIndex];
     
     if (!step) {
       setCurrentPlan(prev => prev ? { ...prev, status: 'completed' } : null);
@@ -100,7 +95,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     setCurrentPlan(prev => prev ? { ...prev, status: 'executing' } : null);
 
     // 构建步骤执行消息
-    const stepMessage = `[执行步骤 ${stepIndex + 1}/${plan.steps.length}: ${step.title}]\n${step.description}`;
+    const stepMessage = `[执行步骤 ${stepIndex + 1}/${currentPlan.steps.length}: ${step.title}]\n${step.description}`;
     
     const loadingMessage: ChatMessage = {
       id: generateMessageId(),
@@ -122,7 +117,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
         enrichedContent, 
         history,
         { 
-          planId: plan.id, 
+          planId: currentPlan.id, 
           stepIndex,
           stepTitle: step.title,
           isExecutingPlan: true,
@@ -163,7 +158,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
         // 如果步骤完成，移动到下一步
         if (status === 'completed') {
           const nextIndex = stepIndex + 1;
-          if (nextIndex >= plan.steps.length) {
+          if (nextIndex >= currentPlan.steps.length) {
             setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
           } else {
             setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
@@ -203,7 +198,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
           // 标记步骤完成并移动到下一步
           updatePlanStep(stepIndex, { status: 'completed' });
           const nextIndex = stepIndex + 1;
-          if (nextIndex >= plan.steps.length) {
+          if (nextIndex >= currentPlan.steps.length) {
             setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
           } else {
             setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
@@ -228,7 +223,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, updatePlanStep]);
+  }, [currentPlan, messages, updatePlanStep]);
 
   const sendMessage = useCallback(async (
     content: string, 
@@ -343,8 +338,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     context: string,
     activeTable?: DecisionTableState | null
   ) => {
-    const plan = currentPlanRef.current;
-    if (!plan || plan.status !== 'paused') {
+    if (!currentPlan || currentPlan.status !== 'paused') {
       return;
     }
 
@@ -373,14 +367,14 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
       const history = messages.filter(m => m.id !== 'welcome' && !m.isLoading);
       
       // 传递计划上下文
-      const stepIndex = plan.currentStepIndex;
-      const step = plan.steps[stepIndex];
+      const stepIndex = currentPlan.currentStepIndex;
+      const step = currentPlan.steps[stepIndex];
       
       const result = await generateDecisionTable(
         enrichedContent, 
         history,
         { 
-          planId: plan.id, 
+          planId: currentPlan.id, 
           stepIndex,
           stepTitle: step?.title || '',
           isExecutingPlan: true,
@@ -411,7 +405,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
       if (status === 'completed' || (!result.pendingConfirmation && !result.stepExecution)) {
         updatePlanStep(stepIndex, { status: 'completed' });
         const nextIndex = stepIndex + 1;
-        if (nextIndex >= plan.steps.length) {
+        if (nextIndex >= currentPlan.steps.length) {
           setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
         } else {
           setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex, status: 'executing' } : null);
@@ -439,7 +433,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, updatePlanStep, executeNextStep]);
+  }, [currentPlan, messages, updatePlanStep, executeNextStep]);
 
   const sendColumnConfirmation = useCallback(async (
     inputs: Array<{ name: string; label: string; dataType: DataType }>,
@@ -450,13 +444,12 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     const confirmMessage = formatColumnConfirmation(inputs, outputs);
     
     // 如果正在执行计划，使用计划继续流程
-    const plan = currentPlanRef.current;
-    if (plan && (plan.status === 'paused' || plan.status === 'executing')) {
+    if (currentPlan && (currentPlan.status === 'paused' || currentPlan.status === 'executing')) {
       await continueAfterConfirmation(confirmMessage, context, activeTable);
     } else {
       await sendMessage(confirmMessage, context);
     }
-  }, [sendMessage, continueAfterConfirmation]);
+  }, [sendMessage, currentPlan, continueAfterConfirmation]);
 
   const sendTestCaseRequest = useCallback(async (
     columns: Column[],
@@ -504,8 +497,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     context: string,
     activeTable?: DecisionTableState | null
   ) => {
-    const plan = currentPlanRef.current;
-    if (!plan) return;
+    if (!currentPlan) return;
 
     setCurrentPlan(prev => prev ? { ...prev, status: 'executing' } : null);
     
@@ -520,7 +512,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
 
     // 开始执行第一步
     await executeNextStep(context, activeTable);
-  }, [executeNextStep]);
+  }, [currentPlan, executeNextStep]);
 
   // 修改计划
   const modifyPlan = useCallback(() => {
@@ -538,31 +530,29 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     context: string,
     activeTable?: DecisionTableState | null
   ) => {
-    const plan = currentPlanRef.current;
-    if (!plan) return;
+    if (!currentPlan) return;
     await executeNextStep(context, activeTable);
-  }, [executeNextStep]);
+  }, [currentPlan, executeNextStep]);
 
   // 跳过当前步骤
   const skipStep = useCallback(async (
     context: string,
     activeTable?: DecisionTableState | null
   ) => {
-    const plan = currentPlanRef.current;
-    if (!plan) return;
+    if (!currentPlan) return;
 
-    const stepIndex = plan.currentStepIndex;
+    const stepIndex = currentPlan.currentStepIndex;
     updatePlanStep(stepIndex, { status: 'skipped' });
 
     const nextIndex = stepIndex + 1;
-    if (nextIndex >= plan.steps.length) {
+    if (nextIndex >= currentPlan.steps.length) {
       setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
     } else {
       setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
       // 执行下一步
       await executeNextStep(context, activeTable);
     }
-  }, [updatePlanStep, executeNextStep]);
+  }, [currentPlan, updatePlanStep, executeNextStep]);
 
   return {
     messages,
