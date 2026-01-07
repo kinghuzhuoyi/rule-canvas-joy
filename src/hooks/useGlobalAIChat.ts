@@ -31,7 +31,8 @@ interface UseGlobalAIChatReturn {
   sendColumnConfirmation: (
     inputs: Array<{ name: string; label: string; dataType: DataType }>,
     outputs: Array<{ name: string; label: string; dataType: DataType }>,
-    context: string
+    context: string,
+    activeTable?: DecisionTableState | null
   ) => Promise<void>;
   sendTestCaseRequest: (columns: Column[], rules: Rule[], notes: string | undefined, context: string) => Promise<void>;
   clearMessages: () => void;
@@ -111,10 +112,16 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
       const enrichedContent = buildEnrichedMessage(stepMessage, context, activeTable);
       const history = messages.filter(m => m.id !== 'welcome' && !m.isLoading);
       
+      // 传递完整的计划上下文，让 AI 知道正在执行哪一步
       const result = await generateDecisionTable(
         enrichedContent, 
         history,
-        { planId: currentPlan.id, stepIndex }
+        { 
+          planId: currentPlan.id, 
+          stepIndex,
+          stepTitle: step.title,
+          isExecutingPlan: true,
+        }
       );
 
       // 处理步骤执行结果
@@ -163,7 +170,7 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
           setCurrentPlan(prev => prev ? { ...prev, status: 'paused' } : null);
         }
       } else {
-        // 没有步骤执行结果，使用消息内容
+        // 没有 stepExecution，检查是否有 pendingConfirmation（需要用户输入）
         const assistantMessage: ChatMessage = {
           id: generateMessageId(),
           role: 'assistant',
@@ -183,13 +190,19 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
           setLastTableOperation({ type: 'create', data: { table: result.table } });
         }
 
-        // 标记步骤完成并移动到下一步
-        updatePlanStep(stepIndex, { status: 'completed' });
-        const nextIndex = stepIndex + 1;
-        if (nextIndex >= currentPlan.steps.length) {
-          setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
+        // 如果有 pendingConfirmation，暂停等待用户输入
+        if (result.pendingConfirmation) {
+          updatePlanStep(stepIndex, { status: 'need_input' });
+          setCurrentPlan(prev => prev ? { ...prev, status: 'paused' } : null);
         } else {
-          setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
+          // 标记步骤完成并移动到下一步
+          updatePlanStep(stepIndex, { status: 'completed' });
+          const nextIndex = stepIndex + 1;
+          if (nextIndex >= currentPlan.steps.length) {
+            setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
+          } else {
+            setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex } : null);
+          }
         }
       }
     } catch (err) {
@@ -319,14 +332,124 @@ export function useGlobalAIChat(): UseGlobalAIChatReturn {
     setError(null);
   }, []);
 
+  // 列确认后继续执行计划的内部方法
+  const continueAfterConfirmation = useCallback(async (
+    confirmMessage: string,
+    context: string,
+    activeTable?: DecisionTableState | null
+  ) => {
+    if (!currentPlan || currentPlan.status !== 'paused') {
+      return;
+    }
+
+    setError(null);
+
+    const userMessage: ChatMessage = {
+      id: generateMessageId(),
+      role: 'user',
+      content: confirmMessage,
+      timestamp: new Date(),
+    };
+
+    const loadingMessage: ChatMessage = {
+      id: generateMessageId(),
+      role: 'assistant',
+      content: '正在处理确认信息...',
+      timestamp: new Date(),
+      isLoading: true,
+    };
+
+    setMessages(prev => [...prev, userMessage, loadingMessage]);
+    setIsLoading(true);
+
+    try {
+      const enrichedContent = buildEnrichedMessage(confirmMessage, context, activeTable);
+      const history = messages.filter(m => m.id !== 'welcome' && !m.isLoading);
+      
+      // 传递计划上下文
+      const stepIndex = currentPlan.currentStepIndex;
+      const step = currentPlan.steps[stepIndex];
+      
+      const result = await generateDecisionTable(
+        enrichedContent, 
+        history,
+        { 
+          planId: currentPlan.id, 
+          stepIndex,
+          stepTitle: step?.title || '',
+          isExecutingPlan: true,
+        }
+      );
+
+      const assistantMessage: ChatMessage = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: result.message,
+        timestamp: new Date(),
+        generatedTable: result.table || undefined,
+        pendingConfirmation: result.pendingConfirmation,
+        generatedTestCases: result.generatedTestCases,
+        testCaseSummary: result.testCaseSummary,
+        stepExecution: result.stepExecution,
+      };
+
+      setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), assistantMessage]);
+
+      if (result.table) {
+        setLastGeneratedTable(result.table);
+        setLastTableOperation({ type: 'create', data: { table: result.table } });
+      }
+
+      // 检查是否可以继续到下一步
+      const status = result.stepExecution?.status;
+      if (status === 'completed' || (!result.pendingConfirmation && !result.stepExecution)) {
+        updatePlanStep(stepIndex, { status: 'completed' });
+        const nextIndex = stepIndex + 1;
+        if (nextIndex >= currentPlan.steps.length) {
+          setCurrentPlan(prev => prev ? { ...prev, status: 'completed', currentStepIndex: nextIndex } : null);
+        } else {
+          setCurrentPlan(prev => prev ? { ...prev, currentStepIndex: nextIndex, status: 'executing' } : null);
+          // 短暂延迟后自动执行下一步
+          setTimeout(() => {
+            executeNextStep(context, activeTable);
+          }, 500);
+        }
+      } else if (result.pendingConfirmation) {
+        // 仍然需要用户输入
+        setCurrentPlan(prev => prev ? { ...prev, status: 'paused' } : null);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '处理失败';
+      setError(errorMessage);
+
+      const errorResponse: ChatMessage = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: `处理确认信息失败：${errorMessage}`,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev.filter(m => m.id !== loadingMessage.id), errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPlan, messages, updatePlanStep, executeNextStep]);
+
   const sendColumnConfirmation = useCallback(async (
     inputs: Array<{ name: string; label: string; dataType: DataType }>,
     outputs: Array<{ name: string; label: string; dataType: DataType }>,
-    context: string
+    context: string,
+    activeTable?: DecisionTableState | null
   ) => {
     const confirmMessage = formatColumnConfirmation(inputs, outputs);
-    await sendMessage(confirmMessage, context);
-  }, [sendMessage]);
+    
+    // 如果正在执行计划，使用计划继续流程
+    if (currentPlan && (currentPlan.status === 'paused' || currentPlan.status === 'executing')) {
+      await continueAfterConfirmation(confirmMessage, context, activeTable);
+    } else {
+      await sendMessage(confirmMessage, context);
+    }
+  }, [sendMessage, currentPlan, continueAfterConfirmation]);
 
   const sendTestCaseRequest = useCallback(async (
     columns: Column[],

@@ -213,8 +213,8 @@ function transformExecutionPlan(response: AIResponse): ExecutionPlan | null {
 export async function generateDecisionTable(
   userMessage: string,
   conversationHistory: ChatMessage[],
-  planContext?: { planId: string; stepIndex: number }
-): Promise<{ 
+  planContext?: { planId: string; stepIndex: number; stepTitle?: string; isExecutingPlan?: boolean }
+): Promise<{
   table: AIGeneratedTable | null; 
   message: string; 
   pendingConfirmation?: PendingConfirmation;

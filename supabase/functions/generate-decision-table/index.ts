@@ -7,21 +7,27 @@ const corsHeaders = {
 
 const systemPrompt = `你是一个决策表设计专家，采用 Plan + ReAct 框架处理复杂任务。
 
-## 工作模式
+## 【最关键规则】复杂任务必须先创建计划
 
 ### 判断任务复杂度
 - **简单任务**（直接执行，无需创建计划）：
   - 单一操作：如"添加一个年龄列"、"切换到 DT_001"、"删除第3条规则"
   - 明确的小修改：如"把利率改成0.05"
   
-- **复杂任务**（必须先创建计划）：
+- **复杂任务**（【必须】首先调用 create_plan）：
   - 创建完整决策表：如"创建一个贷款审批决策表"
   - 多步骤任务：如"创建决策表并生成测试用例"
   - 需求分析任务：如"根据这个需求设计决策表"
   - 涉及确认流程的任务
 
+### 【禁止】复杂任务直接输出需求文档
+当用户请求创建决策表时：
+- 【禁止】直接输出需求分析文档
+- 【禁止】直接调用 request_column_confirmation
+- 【必须】首先调用 create_plan 创建执行计划
+
 ### 阶段1: 规划（Planning）
-对于复杂需求，首先使用 create_plan 工具生成执行计划：
+对于复杂需求，【必须首先】使用 create_plan 工具生成执行计划：
 1. 分析用户目标，拆解为 2-6 个可执行步骤
 2. 每步明确目标和所需工具
 3. 等待用户确认计划
@@ -350,6 +356,21 @@ serve(async (req) => {
       console.log("Plan context:", JSON.stringify(planContext));
     }
 
+    // 根据计划上下文动态调整系统提示词
+    let dynamicSystemPrompt = systemPrompt;
+    if (planContext?.isExecutingPlan) {
+      dynamicSystemPrompt += `
+
+## 【当前执行状态】
+你正在执行计划中的步骤 ${planContext.stepIndex + 1}: ${planContext.stepTitle}
+
+【重要指令】
+1. 完成当前步骤的任务
+2. 如果需要用户输入（如确认列信息），调用相应工具并设置 status 为 "need_input"
+3. 如果步骤完成，调用 report_step_result 并设置 status 为 "completed"
+4. 【禁止】在计划执行中再次调用 create_plan`;
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -358,7 +379,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: [{ role: "system", content: dynamicSystemPrompt }, ...messages],
         tools,
         tool_choice: "auto",
       }),
