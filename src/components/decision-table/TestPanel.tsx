@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Upload, PlayCircle, ChevronRight, ChevronDown } from 'lucide-react';
@@ -39,7 +39,23 @@ export const TestPanel: React.FC<TestPanelProps> = ({
 
   // 使用外部或内部测试用例
   const testCases = externalTestCases ?? internalTestCases;
-  const setTestCases = onTestCasesChange ?? setInternalTestCases;
+  
+  // 创建一个统一的 setter，支持函数式更新
+  const setTestCases = useCallback((newCasesOrUpdater: TestCase[] | ((prev: TestCase[]) => TestCase[])) => {
+    if (onTestCasesChange) {
+      // 外部控制模式：需要手动处理函数式更新
+      if (typeof newCasesOrUpdater === 'function') {
+        const currentCases = externalTestCases ?? [];
+        const newCases = newCasesOrUpdater(currentCases);
+        onTestCasesChange(newCases);
+      } else {
+        onTestCasesChange(newCasesOrUpdater);
+      }
+    } else {
+      // 内部控制模式：直接使用 useState setter
+      setInternalTestCases(newCasesOrUpdater);
+    }
+  }, [onTestCasesChange, externalTestCases]);
 
   // 处理待导入的测试用例
   useEffect(() => {
