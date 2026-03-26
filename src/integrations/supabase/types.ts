@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      decision_table_test_cases: {
+        Row: {
+          created_at: string
+          expected_outputs: Json
+          id: string
+          inputs: Json
+          name: string | null
+          table_id: string
+        }
+        Insert: {
+          created_at?: string
+          expected_outputs?: Json
+          id?: string
+          inputs?: Json
+          name?: string | null
+          table_id: string
+        }
+        Update: {
+          created_at?: string
+          expected_outputs?: Json
+          id?: string
+          inputs?: Json
+          name?: string | null
+          table_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_table_test_cases_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "decision_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decision_tables: {
+        Row: {
+          code: string
+          columns: Json
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          notes: string | null
+          rules: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          columns?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          rules?: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          columns?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          rules?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

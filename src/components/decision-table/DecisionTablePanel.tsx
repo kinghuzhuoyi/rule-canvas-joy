@@ -5,8 +5,9 @@ import { DecisionTableMetaEditor } from './DecisionTableMetaEditor';
 import { NotesEditor } from './NotesEditor';
 import { DecisionTableEditor } from './DecisionTableEditor';
 import { TestPanel } from './TestPanel';
+import { ApiDocsPage } from './ApiDocsPage';
 import { DecisionTableMeta, Column, Rule, TestCase } from './types';
-import { FileText, Table2, FlaskConical } from 'lucide-react';
+import { FileText, Table2, FlaskConical, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DecisionTablePanelProps {
@@ -78,6 +79,10 @@ export const DecisionTablePanel: React.FC<DecisionTablePanelProps> = ({ classNam
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="api" className="gap-1.5 text-xs px-3">
+              <BookOpen className="w-3.5 h-3.5" />
+              Open API
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -111,6 +116,10 @@ export const DecisionTablePanel: React.FC<DecisionTablePanelProps> = ({ classNam
             standalone
             className="h-full border-0"
           />
+        </TabsContent>
+
+        <TabsContent value="api" className="flex-1 m-0 overflow-hidden">
+          <ApiDocsPage className="h-full" />
         </TabsContent>
       </Tabs>
     </div>
