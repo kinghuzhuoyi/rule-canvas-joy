@@ -62,21 +62,89 @@ interface DecisionTableProviderProps {
 }
 
 export function DecisionTableProvider({ children }: DecisionTableProviderProps) {
-  const [tables, setTables] = useState<DecisionTableState[]>(() => {
-    // 初始化一个空表
-    const initialColumns = getDefaultColumns();
-    const initialRules = getDefaultRules(initialColumns);
-    return [{
-      id: generateId(),
-      meta: getDefaultMeta(1),
-      columns: initialColumns,
-      rules: initialRules,
-      notes: '',
-      testCases: [],
-    }];
-  });
-  
-  const [activeTableId, setActiveTableId] = useState<string | null>(() => tables[0]?.id || null);
+  const [tables, setTables] = useState<DecisionTableState[]>([]);
+  const [activeTableId, setActiveTableId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // 从数据库加载决策表
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: dbTables } = await supabase
+          .from('decision_tables')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (dbTables && dbTables.length > 0) {
+          // 加载测试用例
+          const tableIds = dbTables.map(t => t.id);
+          const { data: dbCases } = await supabase
+            .from('decision_table_test_cases')
+            .select('*')
+            .in('table_id', tableIds);
+
+          const casesMap = new Map<string, TestCase[]>();
+          (dbCases || []).forEach(c => {
+            const list = casesMap.get(c.table_id) || [];
+            list.push({
+              id: c.id,
+              name: c.name || '',
+              inputs: c.inputs as Record<string, string>,
+              expectedOutputs: c.expected_outputs as Record<string, string>,
+            });
+            casesMap.set(c.table_id, list);
+          });
+
+          const loadedTables: DecisionTableState[] = dbTables.map(t => ({
+            id: t.id,
+            meta: {
+              code: t.code,
+              name: t.name,
+              description: t.description || '',
+            },
+            columns: (t.columns as unknown as Column[]) || [],
+            rules: (t.rules as unknown as Rule[]) || [],
+            notes: t.notes || '',
+            testCases: casesMap.get(t.id) || [],
+          }));
+
+          setTables(loadedTables);
+          setActiveTableId(loadedTables[0].id);
+        } else {
+          // 无数据库记录时创建默认表
+          const initialColumns = getDefaultColumns();
+          const initialRules = getDefaultRules(initialColumns);
+          const defaultTable: DecisionTableState = {
+            id: generateId(),
+            meta: getDefaultMeta(1),
+            columns: initialColumns,
+            rules: initialRules,
+            notes: '',
+            testCases: [],
+          };
+          setTables([defaultTable]);
+          setActiveTableId(defaultTable.id);
+        }
+      } catch (e) {
+        console.error('Failed to load decision tables:', e);
+        // 出错时也创建默认表
+        const initialColumns = getDefaultColumns();
+        const initialRules = getDefaultRules(initialColumns);
+        const defaultTable: DecisionTableState = {
+          id: generateId(),
+          meta: getDefaultMeta(1),
+          columns: initialColumns,
+          rules: initialRules,
+          notes: '',
+          testCases: [],
+        };
+        setTables([defaultTable]);
+        setActiveTableId(defaultTable.id);
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
 
   // 获取当前活动表
   const activeTable = tables.find(t => t.id === activeTableId) || null;
