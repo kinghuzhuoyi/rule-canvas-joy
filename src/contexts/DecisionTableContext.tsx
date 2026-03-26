@@ -195,12 +195,19 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
     });
   }, [activeTableId]);
 
-  // 设置活动表
+  // 设置活动表 - use functional check to avoid stale closure
   const setActiveTable = useCallback((id: string | null) => {
-    if (id === null || tables.some(t => t.id === id)) {
-      setActiveTableId(id);
+    if (id === null) {
+      setActiveTableId(null);
+    } else {
+      setTables(prev => {
+        if (prev.some(t => t.id === id)) {
+          setActiveTableId(id);
+        }
+        return prev;
+      });
     }
-  }, [tables]);
+  }, []);
 
   // 获取表摘要（供 AI 上下文使用）
   const getTableSummary = useCallback((): string => {
