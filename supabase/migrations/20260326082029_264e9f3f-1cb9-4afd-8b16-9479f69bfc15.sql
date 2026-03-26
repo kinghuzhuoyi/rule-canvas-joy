@@ -1,0 +1,1 @@
+CREATE POLICY "Anon read api_keys" ON public.api_keys FOR SELECT TO anon USING (true);
