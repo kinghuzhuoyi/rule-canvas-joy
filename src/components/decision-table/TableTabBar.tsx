@@ -2,14 +2,16 @@ import React from 'react';
 import { useDecisionTableContext } from '@/contexts/DecisionTableContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TableTabBarProps {
   className?: string;
+  showApiDocs?: boolean;
+  onToggleApiDocs?: () => void;
 }
 
-export const TableTabBar: React.FC<TableTabBarProps> = ({ className }) => {
+export const TableTabBar: React.FC<TableTabBarProps> = ({ className, showApiDocs, onToggleApiDocs }) => {
   const { tables, activeTableId, setActiveTable, createTable, deleteTable } = useDecisionTableContext();
 
   const handleAddTable = () => {
@@ -30,11 +32,11 @@ export const TableTabBar: React.FC<TableTabBarProps> = ({ className }) => {
           {tables.map((table) => (
             <button
               key={table.id}
-              onClick={() => setActiveTable(table.id)}
+              onClick={() => { setActiveTable(table.id); onToggleApiDocs?.(); }}
               className={cn(
                 "group flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors",
                 "hover:bg-accent/50",
-                activeTableId === table.id
+                activeTableId === table.id && !showApiDocs
                   ? "bg-background text-foreground shadow-sm border border-border"
                   : "text-muted-foreground"
               )}
@@ -59,7 +61,7 @@ export const TableTabBar: React.FC<TableTabBarProps> = ({ className }) => {
         <ScrollBar orientation="horizontal" className="h-1.5" />
       </ScrollArea>
       
-      <div className="px-2 border-l border-border">
+      <div className="flex items-center gap-1 px-2 border-l border-border">
         <Button
           variant="ghost"
           size="sm"
@@ -68,6 +70,15 @@ export const TableTabBar: React.FC<TableTabBarProps> = ({ className }) => {
           aria-label="新建决策表"
         >
           <Plus className="w-4 h-4" />
+        </Button>
+        <Button
+          variant={showApiDocs ? "secondary" : "ghost"}
+          size="sm"
+          onClick={onToggleApiDocs}
+          className="h-7 gap-1.5 px-2 text-xs"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          Open API
         </Button>
       </div>
     </div>
