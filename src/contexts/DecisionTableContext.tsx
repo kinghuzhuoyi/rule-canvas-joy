@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { 
   DecisionTableMeta, 
   Column, 
@@ -6,6 +6,7 @@ import {
   TestCase, 
   generateId 
 } from '@/components/decision-table/types';
+import { supabase } from '@/integrations/supabase/client';
 
 // 单个决策表状态
 export interface DecisionTableState {
