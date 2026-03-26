@@ -127,8 +127,10 @@ Deno.serve(async (req) => {
   if (!(await authenticate(req))) return err("Invalid or missing API key", 401);
 
   const url = new URL(req.url);
-  // Path after /decision-table-api/
-  const pathParts = url.pathname.replace(/^\/decision-table-api\/?/, "").split("/").filter(Boolean);
+  // Strip function name prefix, then "decision-tables" resource prefix
+  const rawPath = url.pathname.replace(/^\/decision-table-api\/?/, "");
+  const pathParts = rawPath.replace(/^decision-tables\/?/, "").split("/").filter(Boolean);
+  const isDecisionTablesRoute = rawPath.startsWith("decision-tables") || rawPath === "" || rawPath === "/";
   const sb = supabaseAdmin();
 
   try {
