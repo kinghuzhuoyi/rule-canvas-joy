@@ -242,6 +242,14 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
     getTableById,
   };
 
+  if (!loaded) {
+    return (
+      <div className="h-screen flex items-center justify-center text-muted-foreground text-sm">
+        加载决策表中…
+      </div>
+    );
+  }
+
   return (
     <DecisionTableContext.Provider value={value}>
       {children}
