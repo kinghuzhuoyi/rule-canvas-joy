@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Copy, ChevronRight, ChevronDown, ExternalLink, Key, Eye, EyeOff } from 'lucide-react';
+import { Copy, ChevronRight, ChevronDown, ExternalLink, Key, Eye, EyeOff, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -261,15 +261,65 @@ export const ApiDocsPage: React.FC<ApiDocsPageProps> = ({ className }) => {
     }
   };
 
+  const downloadMarkdown = () => {
+    const lines: string[] = [];
+    lines.push('# 决策表 Open API\n');
+    lines.push('以下接口开放给外部系统调用，支持决策表的完整生命周期管理。\n');
+    lines.push('## 接入信息\n');
+    lines.push(`- **Base URL**: \`${BASE_URL_HINT}\``);
+    lines.push('- **认证方式**: 所有请求须在 Header 中携带 `x-api-key`\n');
+    lines.push('### 请求示例\n');
+    lines.push('```bash');
+    lines.push(`curl -X GET "${BASE_URL_HINT}/decision-tables" \\`);
+    lines.push('  -H "x-api-key: YOUR_API_KEY" \\');
+    lines.push('  -H "Content-Type: application/json"');
+    lines.push('```\n');
+    lines.push('## 接口列表\n');
+    ENDPOINTS.forEach((ep) => {
+      lines.push(`### ${ep.method} \`${ep.path}\` — ${ep.title}\n`);
+      lines.push(`${ep.description}\n`);
+      if (ep.pathParams) {
+        lines.push(`**路径参数**: \`${ep.pathParams}\`\n`);
+      }
+      if (ep.requestBody) {
+        lines.push('**请求体**:\n```json');
+        lines.push(ep.requestBody);
+        lines.push('```\n');
+      }
+      lines.push('**响应**:\n```json');
+      lines.push(ep.responseBody);
+      lines.push('```\n');
+    });
+    lines.push('## 数据模型\n');
+    lines.push('### Column 列定义\n```json\n{\n  "id": "col_1",\n  "name": "product_id",\n  "dataType": "string",\n  "isInput": true,\n  "variableId": "var_1"\n}\n```\n');
+    lines.push('### Rule 规则\n```json\n{\n  "id": "rule_1",\n  "cells": {\n    "col_1": "sZ0101",\n    "col_2": "L5",\n    "col_3": "0.0150"\n  }\n}\n```\n');
+    lines.push('输入条件支持：精确值、区间 `(0,100]`、通配 `""` / `"-"` / `"*"`\n');
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'decision-table-openapi.md';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('文档已下载');
+  };
+
   return (
     <ScrollArea className={cn("h-full", className)}>
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">决策表 Open API</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            以下接口开放给外部系统调用，支持决策表的完整生命周期管理。
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">决策表 Open API</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              以下接口开放给外部系统调用，支持决策表的完整生命周期管理。
+            </p>
+          </div>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={downloadMarkdown}>
+            <Download className="w-3.5 h-3.5" />
+            下载文档
+          </Button>
         </div>
 
         {/* Base URL & Auth */}
