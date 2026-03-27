@@ -131,7 +131,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
     setEditingColumn(null);
   };
   const renderColumnHeader = (column: Column, canDelete: boolean) => {
-    const typeIcon = DATA_TYPE_ICONS[column.dataType];
+    const typeIcon = DATA_TYPE_ICONS[column.dataType] || { icon: '?', color: 'text-muted-foreground' };
     return <div key={column.id} className={cn("group relative flex flex-col items-center justify-center p-2 w-[140px] flex-shrink-0", "border-r border-border last:border-r-0")}>
         <div className="flex items-center gap-1">
           {/* 类型图标 */}
