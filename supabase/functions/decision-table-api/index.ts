@@ -288,6 +288,46 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ───── Variable CRUD (called from client via supabase.functions.invoke) ─────
+    // These use JSON body with action field, invoked from the client-side VariableManagerPanel
+    if (req.method === "POST" && !isDecisionTablesRoute) {
+      const body = await req.json();
+      const { action } = body;
+
+      if (action === "create_variable") {
+        const { code, name, data_type, description } = body;
+        if (!code || !name) return err("code and name are required");
+        const { data, error: e } = await sb
+          .from("variables")
+          .insert({ code, name, data_type: data_type || "string", description: description || "" })
+          .select()
+          .single();
+        if (e) return err(e.message, 500);
+        return json(data, 201);
+      }
+
+      if (action === "update_variable") {
+        const { id, code, name, data_type, description } = body;
+        if (!id) return err("id is required");
+        const updates: Record<string, unknown> = {};
+        if (code !== undefined) updates.code = code;
+        if (name !== undefined) updates.name = name;
+        if (data_type !== undefined) updates.data_type = data_type;
+        if (description !== undefined) updates.description = description;
+        const { data, error: e } = await sb.from("variables").update(updates).eq("id", id).select().single();
+        if (e) return err(e.message, 500);
+        return json(data);
+      }
+
+      if (action === "delete_variable") {
+        const { id } = body;
+        if (!id) return err("id is required");
+        const { error: e } = await sb.from("variables").delete().eq("id", id);
+        if (e) return err(e.message, 500);
+        return json({ success: true });
+      }
+    }
+
     return err("Not found", 404);
   } catch (e) {
     console.error("API error:", e);
