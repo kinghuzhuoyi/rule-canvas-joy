@@ -169,22 +169,45 @@ export const ColumnConfirmationCard: React.FC<ColumnConfirmationCardProps> = ({
   pendingOutputs = [],
   onConfirm,
 }) => {
+  // Load variables from DB
+  const [dbVariables, setDbVariables] = useState<Variable[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('variables').select('*').order('created_at', { ascending: true });
+      setDbVariables((data || []).map(v => ({
+        id: v.id,
+        name: v.code,
+        label: v.name,
+        dataType: v.data_type as DataType,
+      })));
+    })();
+  }, []);
+
   // 输入列选择状态
   const [selectedInputs, setSelectedInputs] = useState<Record<number, Variable | null>>(
     () => {
       const initial: Record<number, Variable | null> = {};
-      pendingInputs.forEach((input, index) => {
-        // 如果已有 name，尝试匹配已有变量
-        if (input.name) {
-          const matched = MOCK_VARIABLES.find(v => v.name === input.name);
-          initial[index] = matched || null;
-        } else {
-          initial[index] = null;
-        }
+      pendingInputs.forEach((_input, index) => {
+        initial[index] = null;
       });
       return initial;
     }
   );
+
+  // Auto-match when dbVariables load
+  useEffect(() => {
+    if (dbVariables.length === 0) return;
+    setSelectedInputs(prev => {
+      const updated = { ...prev };
+      pendingInputs.forEach((input, index) => {
+        if (!updated[index] && input.name) {
+          const matched = dbVariables.find(v => v.name === input.name);
+          if (matched) updated[index] = matched;
+        }
+      });
+      return updated;
+    });
+  }, [dbVariables, pendingInputs]);
 
   // 输出列编辑状态
   const [outputValues, setOutputValues] = useState<Record<number, { name: string; dataType: DataType; description: string }>>(
@@ -266,6 +289,7 @@ export const ColumnConfirmationCard: React.FC<ColumnConfirmationCardProps> = ({
                   key={index}
                   pending={input}
                   selectedVariable={selectedInputs[index]}
+                  availableVariables={dbVariables}
                   onSelect={(variable) => {
                     setSelectedInputs(prev => ({ ...prev, [index]: variable }));
                   }}
