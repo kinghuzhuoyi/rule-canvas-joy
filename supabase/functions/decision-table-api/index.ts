@@ -162,6 +162,59 @@ Deno.serve(async (req) => {
       return json({ data, total: count, page, page_size: pageSize });
     }
 
+    // ───── Variables endpoints (before decision-table ID routing) ─────
+
+    // GET /variables — list all managed variables
+    if (req.method === "GET" && rawPath === "variables") {
+      const { data, error: e } = await sb
+        .from("variables")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (e) return err(e.message, 500);
+      return json(data);
+    }
+
+    // GET /available-inputs?exclude_table_id={id} — list variables + other table outputs
+    if (req.method === "GET" && rawPath.startsWith("available-inputs")) {
+      const excludeTableId = url.searchParams.get("exclude_table_id") || "";
+
+      const { data: vars } = await sb
+        .from("variables")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      const variableItems = (vars || []).map((v: any) => ({
+        id: `var_${v.id}`,
+        name: v.code,
+        label: v.name,
+        dataType: v.data_type,
+        group: "variable",
+      }));
+
+      const { data: tables } = await sb
+        .from("decision_tables")
+        .select("id,code,name,columns")
+        .order("created_at", { ascending: true });
+
+      const outputItems: any[] = [];
+      (tables || []).forEach((t: any) => {
+        if (t.id === excludeTableId) return;
+        const cols = (t.columns as Column[]) || [];
+        cols.filter(c => !c.isInput).forEach(col => {
+          outputItems.push({
+            id: `output_${t.id}_${col.id}`,
+            name: `${t.code}.${col.name}`,
+            label: `${t.name} → ${col.name}`,
+            dataType: col.dataType || "string",
+            group: "output",
+            sourceTable: t.code,
+          });
+        });
+      });
+
+      return json({ variables: variableItems, outputs: outputItems });
+    }
+
     // Single table routes: /decision-tables/{id}
     if (pathParts.length >= 1) {
       const tableId = pathParts[0];
