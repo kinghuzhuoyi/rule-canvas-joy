@@ -80,14 +80,17 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   const [rules, setRules] = useState<Rule[]>(() => initialData?.rules || getDefaultData().rules);
   
   // 用于深度比较的 ref
-  const prevColumnsRef = useRef<string>('');
-  const prevRulesRef = useRef<string>('');
+  const prevColumnsRef = useRef<string>(JSON.stringify(initialData?.columns || []));
+  const prevRulesRef = useRef<string>(JSON.stringify(initialData?.rules || []));
+  // 标记是否正在从外部同步，避免循环触发 onChange
+  const isSyncingFromParent = useRef(false);
   
   // 同步外部数据变化
   useEffect(() => {
     const columnsStr = JSON.stringify(initialData?.columns);
     if (initialData?.columns && columnsStr !== prevColumnsRef.current) {
       prevColumnsRef.current = columnsStr;
+      isSyncingFromParent.current = true;
       setColumns(initialData.columns);
     }
   }, [initialData?.columns]);
@@ -96,6 +99,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     const rulesStr = JSON.stringify(initialData?.rules);
     if (initialData?.rules && rulesStr !== prevRulesRef.current) {
       prevRulesRef.current = rulesStr;
+      isSyncingFromParent.current = true;
       setRules(initialData.rules);
     }
   }, [initialData?.rules]);
@@ -123,8 +127,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     clearSelection,
   });
   
-  // 触发 onChange
+  // 触发 onChange（仅当本地编辑时，跳过从父组件同步的情况）
   useEffect(() => {
+    if (isSyncingFromParent.current) {
+      isSyncingFromParent.current = false;
+      return;
+    }
+    prevColumnsRef.current = JSON.stringify(columns);
+    prevRulesRef.current = JSON.stringify(rules);
     onChange?.({ columns, rules });
   }, [columns, rules, onChange]);
   
