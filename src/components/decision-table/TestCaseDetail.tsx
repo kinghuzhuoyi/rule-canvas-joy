@@ -61,7 +61,7 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({
     onValueChange: (v: string) => void,
     disabled?: boolean
   ) => {
-    const icon = DATA_TYPE_ICONS[column.dataType];
+    const icon = DATA_TYPE_ICONS[column.dataType] || { icon: '?', color: 'text-muted-foreground' };
 
     if (column.dataType === 'boolean') {
       return (
