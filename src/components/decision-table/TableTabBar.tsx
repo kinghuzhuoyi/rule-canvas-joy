@@ -32,7 +32,7 @@ export const TableTabBar: React.FC<TableTabBarProps> = ({ className, showApiDocs
           {tables.map((table) => (
             <button
               key={table.id}
-              onClick={() => { setActiveTable(table.id); onToggleApiDocs?.(); }}
+              onClick={() => { setActiveTable(table.id); if (showApiDocs) onToggleApiDocs?.(); }}
               className={cn(
                 "group flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors",
                 "hover:bg-accent/50",
