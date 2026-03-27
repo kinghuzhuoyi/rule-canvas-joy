@@ -101,19 +101,7 @@ export interface ValidationError {
   message: string;
 }
 
-// 模拟变量数据
-export const MOCK_VARIABLES: Variable[] = [
-  { id: 'var_1', name: 'product_id', label: '产品编码', dataType: 'string' },
-  { id: 'var_2', name: 'score', label: '评分', dataType: 'integer' },
-  { id: 'var_3', name: 'amount', label: '金额', dataType: 'decimal' },
-  { id: 'var_4', name: 'is_vip', label: 'VIP状态', dataType: 'boolean' },
-  { id: 'var_5', name: 'region', label: '地区', dataType: 'string' },
-  { id: 'var_6', name: 'age', label: '年龄', dataType: 'integer' },
-  { id: 'var_7', name: 'balance', label: '余额', dataType: 'decimal' },
-  { id: 'var_8', name: 'is_active', label: '是否激活', dataType: 'boolean' },
-  { id: 'var_9', name: 'category', label: '类别', dataType: 'string' },
-  { id: 'var_10', name: 'level', label: '等级', dataType: 'integer' },
-];
+// MOCK_VARIABLES removed — variables are now managed in the database
 
 // 数据类型显示名称
 export const DATA_TYPE_LABELS: Record<DataType, string> = {
