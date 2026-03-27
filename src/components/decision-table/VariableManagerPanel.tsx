@@ -59,18 +59,17 @@ export const VariableManagerPanel: React.FC<VariableManagerPanelProps> = ({ clas
       return;
     }
 
-    const { error } = await supabase.functions.invoke('decision-table-api', {
-      body: {
-        action: 'create_variable',
+    const { error } = await supabase
+      .from('variables')
+      .insert({
         code: newForm.code.trim(),
         name: newForm.name.trim(),
         data_type: newForm.dataType,
         description: newForm.description.trim(),
-      },
-    });
+      });
 
     if (error) {
-      toast({ variant: 'destructive', description: '新增变量失败' });
+      toast({ variant: 'destructive', description: `新增变量失败: ${error.message}` });
       return;
     }
 
@@ -83,16 +82,15 @@ export const VariableManagerPanel: React.FC<VariableManagerPanelProps> = ({ clas
   const handleUpdate = async (id: string) => {
     if (!editForm.code.trim() || !editForm.name.trim()) return;
 
-    const { error } = await supabase.functions.invoke('decision-table-api', {
-      body: {
-        action: 'update_variable',
-        id,
+    const { error } = await supabase
+      .from('variables')
+      .update({
         code: editForm.code.trim(),
         name: editForm.name.trim(),
         data_type: editForm.dataType,
         description: editForm.description.trim(),
-      },
-    });
+      })
+      .eq('id', id);
 
     if (error) {
       toast({ variant: 'destructive', description: '更新变量失败' });
@@ -105,9 +103,10 @@ export const VariableManagerPanel: React.FC<VariableManagerPanelProps> = ({ clas
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.functions.invoke('decision-table-api', {
-      body: { action: 'delete_variable', id },
-    });
+    const { error } = await supabase
+      .from('variables')
+      .delete()
+      .eq('id', id);
 
     if (error) {
       toast({ variant: 'destructive', description: '删除变量失败' });
@@ -179,7 +178,7 @@ export const VariableManagerPanel: React.FC<VariableManagerPanelProps> = ({ clas
                 <div key={v.id} className="grid grid-cols-[1fr_1fr_100px_1fr_80px] gap-2 px-3 py-2 bg-accent/30 rounded-md items-center">
                   <Input value={editForm.code} onChange={e => setEditForm(p => ({ ...p, code: e.target.value }))} className="h-7 text-sm" />
                   <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="h-7 text-sm" />
-                  <Select value={editForm.dataType} onValueChange={v => setEditForm(p => ({ ...p, dataType: v as DataType }))}>
+                  <Select value={editForm.dataType} onValueChange={val => setEditForm(p => ({ ...p, dataType: val as DataType }))}>
                     <SelectTrigger className="h-7 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(DATA_TYPE_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
