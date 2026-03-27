@@ -341,7 +341,7 @@ Deno.serve(async (req) => {
       }
     }
 
-      const { data, error: e } = await sb
+    // ───── Variable CRUD (called from client via supabase.functions.invoke) ─────
         .from("variables")
         .select("*")
         .order("created_at", { ascending: true });
