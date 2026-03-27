@@ -76,21 +76,23 @@ function parseRange(expr: string) {
   return { type: "single" as const, value: expr.trim() };
 }
 
-function matches(iv: string, cond: string, dt: string): boolean {
-  if (!cond || cond.trim() === "" || cond === "-" || cond === "*") return true;
-  if (!iv || iv.trim() === "") return false;
-  const p = parseRange(cond);
+function matches(iv: unknown, cond: unknown, dt: string): boolean {
+  const condStr = cond === null || cond === undefined ? "" : String(cond);
+  if (!condStr || condStr.trim() === "" || condStr === "-" || condStr === "*") return true;
+  const ivStr = iv === null || iv === undefined ? "" : String(iv);
+  if (!ivStr || ivStr.trim() === "") return false;
+  const p = parseRange(condStr);
   if (p.type === "any") return true;
   if (p.type === "range") {
-    const n = parseFloat(iv);
+    const n = parseFloat(ivStr);
     if (isNaN(n)) return false;
     const ok1 = p.si ? n >= p.start! : n > p.start!;
     const ok2 = p.ei ? n <= p.end! : n < p.end!;
     return ok1 && ok2;
   }
-  if (dt === "boolean") return iv.toLowerCase() === String(p.value).toLowerCase();
-  if (dt === "integer" || dt === "decimal") return parseFloat(iv) === parseFloat(String(p.value));
-  return iv === p.value;
+  if (dt === "boolean") return ivStr.toLowerCase() === String(p.value).toLowerCase();
+  if (dt === "integer" || dt === "decimal") return parseFloat(ivStr) === parseFloat(String(p.value));
+  return ivStr === p.value;
 }
 
 function executeRules(
