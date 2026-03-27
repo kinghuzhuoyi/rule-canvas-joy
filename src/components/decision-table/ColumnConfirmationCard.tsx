@@ -37,17 +37,18 @@ const InputColumnSelector: React.FC<{
   pending: PendingColumn;
   selectedVariable: Variable | null;
   onSelect: (variable: Variable) => void;
-}> = ({ pending, selectedVariable, onSelect }) => {
+  availableVariables: Variable[];
+}> = ({ pending, selectedVariable, onSelect, availableVariables }) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredVariables = useMemo(() => {
-    if (!searchTerm) return MOCK_VARIABLES;
+    if (!searchTerm) return availableVariables;
     const lower = searchTerm.toLowerCase();
-    return MOCK_VARIABLES.filter(
+    return availableVariables.filter(
       v => v.name.toLowerCase().includes(lower) || v.label.toLowerCase().includes(lower)
     );
-  }, [searchTerm]);
+  }, [searchTerm, availableVariables]);
 
   const isConfirmed = selectedVariable !== null;
 
