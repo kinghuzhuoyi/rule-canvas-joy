@@ -167,6 +167,37 @@ const ENDPOINTS: ApiEndpoint[] = [
   ]
 }`,
   },
+  {
+    method: 'GET',
+    path: '/variables',
+    title: '获取变量列表',
+    description: '查询所有已维护的变量定义，包含编码、名称和数据类型。变量可作为决策表的输入列来源。',
+    responseBody: `[
+  {
+    "id": "uuid",
+    "code": "product_id",
+    "name": "产品ID",
+    "data_type": "string",
+    "description": "",
+    "created_at": "...",
+    "updated_at": "..."
+  }
+]`,
+  },
+  {
+    method: 'GET',
+    path: '/available-inputs?exclude_table_id={id}',
+    title: '获取可用输入列表',
+    description: '获取决策表配置时可选择的所有输入来源，包括：1) 已维护的变量；2) 其他决策表的输出列。可通过 exclude_table_id 排除当前决策表的输出。',
+    responseBody: `{
+  "variables": [
+    { "id": "var_uuid", "name": "product_id", "label": "产品ID", "dataType": "string", "group": "variable" }
+  ],
+  "outputs": [
+    { "id": "output_uuid_col_2", "name": "model_cust.score_level", "label": "模型分分箱 → score_level", "dataType": "string", "group": "output", "sourceTable": "model_cust" }
+  ]
+}`,
+  },
 ];
 
 function CodeBlock({ code, language = 'json' }: { code: string; language?: string }) {
