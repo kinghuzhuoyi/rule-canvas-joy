@@ -341,10 +341,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ───── Variables endpoints ─────
-
-    // GET /variables — list all managed variables
-    if (req.method === "GET" && rawPath.startsWith("variables")) {
       const { data, error: e } = await sb
         .from("variables")
         .select("*")
