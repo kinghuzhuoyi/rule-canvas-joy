@@ -1,0 +1,2 @@
+DELETE FROM public.decision_table_test_cases WHERE table_id IN ('7c943c6b-7881-4c9d-a7fb-3eb9c929eb52','bd80b831-f77b-47c6-a3d5-44708c5eb26e','bf805dd9-cfb3-40e4-9a2d-2301b0809d44');
+DELETE FROM public.decision_tables WHERE id IN ('7c943c6b-7881-4c9d-a7fb-3eb9c929eb52','bd80b831-f77b-47c6-a3d5-44708c5eb26e','bf805dd9-cfb3-40e4-9a2d-2301b0809d44');

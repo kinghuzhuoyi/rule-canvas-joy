@@ -181,6 +181,13 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
 
   // 删除表
   const deleteTable = useCallback((id: string) => {
+    // 同步删除数据库记录
+    supabase.from('decision_table_test_cases').delete().eq('table_id', id).then(() => {
+      supabase.from('decision_tables').delete().eq('id', id).then(({ error }) => {
+        if (error) console.error('Failed to delete decision table from DB:', error);
+      });
+    });
+
     setTables(prev => {
       const newTables = prev.filter(t => t.id !== id);
       
