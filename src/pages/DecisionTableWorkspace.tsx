@@ -4,6 +4,7 @@ import { TableTabBar } from '@/components/decision-table/TableTabBar';
 import { GlobalAIChat } from '@/components/decision-table/GlobalAIChat';
 import { DecisionTablePanel } from '@/components/decision-table/DecisionTablePanel';
 import { ApiDocsPage } from '@/components/decision-table/ApiDocsPage';
+import { VariableManagerPanel } from '@/components/decision-table/VariableManagerPanel';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -12,6 +13,17 @@ import {
 
 const DecisionTableWorkspace: React.FC = () => {
   const [showApiDocs, setShowApiDocs] = useState(false);
+  const [showVariableManager, setShowVariableManager] = useState(false);
+
+  const handleToggleApiDocs = () => {
+    setShowApiDocs(prev => !prev);
+    if (!showApiDocs) setShowVariableManager(false);
+  };
+
+  const handleToggleVariableManager = () => {
+    setShowVariableManager(prev => !prev);
+    if (!showVariableManager) setShowApiDocs(false);
+  };
 
   return (
     <DecisionTableProvider>
@@ -19,11 +31,18 @@ const DecisionTableWorkspace: React.FC = () => {
         <TableTabBar
           className="h-10 shrink-0"
           showApiDocs={showApiDocs}
-          onToggleApiDocs={() => setShowApiDocs(prev => !prev)}
+          onToggleApiDocs={handleToggleApiDocs}
+          showVariableManager={showVariableManager}
+          onToggleVariableManager={handleToggleVariableManager}
         />
         
         {showApiDocs ? (
           <ApiDocsPage className="flex-1" />
+        ) : showVariableManager ? (
+          <VariableManagerPanel
+            className="flex-1"
+            onClose={() => setShowVariableManager(false)}
+          />
         ) : (
           <ResizablePanelGroup direction="horizontal" className="flex-1">
             <ResizablePanel defaultSize={30} minSize={20} maxSize={45}>

@@ -1,33 +1,101 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
-import { Variable, MOCK_VARIABLES, DATA_TYPE_LABELS } from './types';
+import { Variable, DataType, DATA_TYPE_LABELS } from './types';
+import { supabase } from '@/integrations/supabase/client';
+import { useDecisionTableContext } from '@/contexts/DecisionTableContext';
 import { cn } from '@/lib/utils';
 
 interface VariableSelectorProps {
   onSelect: (variable: Variable) => void;
   onCancel: () => void;
+  /** Exclude variables from a specific table (to avoid self-referencing outputs) */
+  excludeTableId?: string;
 }
 
-export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect, onCancel }) => {
+interface SelectableItem {
+  id: string;
+  name: string;
+  label: string;
+  dataType: DataType;
+  group: 'variable' | 'output';
+  sourceTable?: string; // e.g. "cust_seg"
+}
+
+export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect, onCancel, excludeTableId }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [items, setItems] = useState<SelectableItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { tables, activeTableId } = useDecisionTableContext();
   
-  const filteredVariables = useMemo(() => {
-    if (!searchTerm) return MOCK_VARIABLES;
+  // Load managed variables from DB
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('variables')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      const variableItems: SelectableItem[] = (data || []).map(v => ({
+        id: `var_${v.id}`,
+        name: v.code,
+        label: v.name,
+        dataType: v.data_type as DataType,
+        group: 'variable' as const,
+      }));
+      
+      // Build output items from other decision tables
+      const currentTableId = excludeTableId || activeTableId;
+      const outputItems: SelectableItem[] = [];
+      tables.forEach(t => {
+        if (t.id === currentTableId) return;
+        const outputCols = t.columns.filter(c => !c.isInput);
+        outputCols.forEach(col => {
+          outputItems.push({
+            id: `output_${t.id}_${col.id}`,
+            name: `${t.meta.code}.${col.name}`,
+            label: `${t.meta.name} → ${col.name}`,
+            dataType: col.dataType || 'string',
+            group: 'output',
+            sourceTable: t.meta.code,
+          });
+        });
+      });
+      
+      setItems([...variableItems, ...outputItems]);
+      setLoading(false);
+    })();
+  }, [tables, activeTableId, excludeTableId]);
+  
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return items;
     const lower = searchTerm.toLowerCase();
-    return MOCK_VARIABLES.filter(
+    return items.filter(
       v => v.name.toLowerCase().includes(lower) || v.label.toLowerCase().includes(lower)
     );
-  }, [searchTerm]);
+  }, [searchTerm, items]);
+  
+  const variableItems = filteredItems.filter(i => i.group === 'variable');
+  const outputItems = filteredItems.filter(i => i.group === 'output');
+  
+  const handleSelect = (item: SelectableItem) => {
+    const variable: Variable = {
+      id: item.id,
+      name: item.name,
+      label: item.label,
+      dataType: item.dataType,
+    };
+    onSelect(variable);
+  };
   
   return (
-    <div className="flex flex-col gap-2 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[240px]">
+    <div className="flex flex-col gap-2 p-3 bg-card border border-border rounded-lg shadow-lg min-w-[280px]">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="搜索变量..."
+            placeholder="搜索变量或决策表输出..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-8 h-8 text-sm"
@@ -39,31 +107,64 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect, on
         </Button>
       </div>
       
-      <div className="max-h-[200px] overflow-y-auto">
-        {filteredVariables.length === 0 ? (
+      <div className="max-h-[280px] overflow-y-auto">
+        {loading ? (
+          <div className="text-sm text-muted-foreground text-center py-4">加载中…</div>
+        ) : filteredItems.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-4">
-            未找到匹配的变量
+            未找到匹配的变量或输出
           </div>
         ) : (
           <div className="flex flex-col gap-1">
-            {filteredVariables.map(variable => (
-              <button
-                key={variable.id}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2 rounded-md text-sm",
-                  "hover:bg-accent transition-colors text-left"
-                )}
-                onClick={() => onSelect(variable)}
-              >
-                <div className="flex flex-col">
-                  <span className="font-medium text-foreground">{variable.name}</span>
-                  <span className="text-xs text-muted-foreground">{variable.label}</span>
-                </div>
-                <span className="text-xs px-2 py-0.5 bg-secondary rounded text-secondary-foreground">
-                  {DATA_TYPE_LABELS[variable.dataType]}
-                </span>
-              </button>
-            ))}
+            {/* Variables section */}
+            {variableItems.length > 0 && (
+              <>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase px-3 py-1">变量</div>
+                {variableItems.map(item => (
+                  <button
+                    key={item.id}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 rounded-md text-sm",
+                      "hover:bg-accent transition-colors text-left"
+                    )}
+                    onClick={() => handleSelect(item)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground font-mono text-xs">{item.name}</span>
+                      <span className="text-xs text-muted-foreground">{item.label}</span>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 bg-secondary rounded text-secondary-foreground">
+                      {DATA_TYPE_LABELS[item.dataType] || item.dataType}
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
+            
+            {/* Decision table outputs section */}
+            {outputItems.length > 0 && (
+              <>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase px-3 py-1 mt-1">决策表输出</div>
+                {outputItems.map(item => (
+                  <button
+                    key={item.id}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 rounded-md text-sm",
+                      "hover:bg-accent transition-colors text-left"
+                    )}
+                    onClick={() => handleSelect(item)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground font-mono text-xs">{item.name}</span>
+                      <span className="text-xs text-muted-foreground">{item.label}</span>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 bg-primary/10 rounded text-primary">
+                      {DATA_TYPE_LABELS[item.dataType] || item.dataType}
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>

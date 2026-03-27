@@ -2,16 +2,24 @@ import React from 'react';
 import { useDecisionTableContext } from '@/contexts/DecisionTableContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Plus, X, BookOpen } from 'lucide-react';
+import { Plus, X, BookOpen, Variable } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TableTabBarProps {
   className?: string;
   showApiDocs?: boolean;
   onToggleApiDocs?: () => void;
+  showVariableManager?: boolean;
+  onToggleVariableManager?: () => void;
 }
 
-export const TableTabBar: React.FC<TableTabBarProps> = ({ className, showApiDocs, onToggleApiDocs }) => {
+export const TableTabBar: React.FC<TableTabBarProps> = ({
+  className,
+  showApiDocs,
+  onToggleApiDocs,
+  showVariableManager,
+  onToggleVariableManager,
+}) => {
   const { tables, activeTableId, setActiveTable, createTable, deleteTable } = useDecisionTableContext();
 
   const handleAddTable = () => {
@@ -32,11 +40,15 @@ export const TableTabBar: React.FC<TableTabBarProps> = ({ className, showApiDocs
           {tables.map((table) => (
             <button
               key={table.id}
-              onClick={() => { setActiveTable(table.id); if (showApiDocs) onToggleApiDocs?.(); }}
+              onClick={() => {
+                setActiveTable(table.id);
+                if (showApiDocs) onToggleApiDocs?.();
+                if (showVariableManager) onToggleVariableManager?.();
+              }}
               className={cn(
                 "group flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors",
                 "hover:bg-accent/50",
-                activeTableId === table.id && !showApiDocs
+                activeTableId === table.id && !showApiDocs && !showVariableManager
                   ? "bg-background text-foreground shadow-sm border border-border"
                   : "text-muted-foreground"
               )}
@@ -70,6 +82,15 @@ export const TableTabBar: React.FC<TableTabBarProps> = ({ className, showApiDocs
           aria-label="新建决策表"
         >
           <Plus className="w-4 h-4" />
+        </Button>
+        <Button
+          variant={showVariableManager ? "secondary" : "ghost"}
+          size="sm"
+          onClick={onToggleVariableManager}
+          className="h-7 gap-1.5 px-2 text-xs"
+        >
+          <Variable className="w-3.5 h-3.5" />
+          变量
         </Button>
         <Button
           variant={showApiDocs ? "secondary" : "ghost"}
