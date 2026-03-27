@@ -7,7 +7,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown, Package, PackageOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Variable, MOCK_VARIABLES, DATA_TYPE_LABELS, DataType } from './types';
+import { Variable, DATA_TYPE_LABELS, DataType } from './types';
+import { supabase } from '@/integrations/supabase/client';
 
 // 待确认列信息
 export interface PendingColumn {
