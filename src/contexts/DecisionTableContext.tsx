@@ -6,7 +6,8 @@ import {
   TestCase, 
   ComponentType,
   ComponentConfig,
-  generateId 
+  generateId,
+  generateUUID 
 } from '@/components/decision-table/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -125,7 +126,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
           const initialColumns = getDefaultColumns();
           const initialRules = getDefaultRules(initialColumns);
           const defaultTable: DecisionTableState = {
-            id: generateId(),
+            id: generateUUID(),
             type: 'decision_table',
             meta: getDefaultMeta(1),
             columns: initialColumns,
@@ -142,7 +143,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
         const initialColumns = getDefaultColumns();
         const initialRules = getDefaultRules(initialColumns);
         const defaultTable: DecisionTableState = {
-          id: generateId(),
+            id: generateUUID(),
           type: 'decision_table',
           meta: getDefaultMeta(1),
           columns: initialColumns,
@@ -190,7 +191,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
 
   // 创建新表
   const createTable = useCallback((data?: Partial<Omit<DecisionTableState, 'id'>>): string => {
-    const newId = generateId();
+    const newId = generateUUID();
     const componentType = data?.type || 'decision_table';
     const newColumns = componentType === 'decision_table' ? (data?.columns || getDefaultColumns()) : [];
     const newRules = componentType === 'decision_table' ? (data?.rules || getDefaultRules(newColumns)) : [];
