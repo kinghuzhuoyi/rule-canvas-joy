@@ -4,6 +4,8 @@ import {
   Column, 
   Rule, 
   TestCase, 
+  ComponentType,
+  ComponentConfig,
   generateId 
 } from '@/components/decision-table/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,11 +13,13 @@ import { supabase } from '@/integrations/supabase/client';
 // 单个决策表状态
 export interface DecisionTableState {
   id: string;
+  type: ComponentType;
   meta: DecisionTableMeta;
   columns: Column[];
   rules: Rule[];
   notes: string;
   testCases: TestCase[];
+  config: ComponentConfig;
 }
 
 // Context 值类型
@@ -38,11 +42,15 @@ interface DecisionTableContextValue {
 const DecisionTableContext = createContext<DecisionTableContextValue | null>(null);
 
 // 生成默认元信息
-const getDefaultMeta = (index: number): DecisionTableMeta => ({
-  code: `DT_${String(index).padStart(3, '0')}`,
-  name: `决策表 ${index}`,
-  description: '',
-});
+const getDefaultMeta = (index: number, type: ComponentType = 'decision_table'): DecisionTableMeta => {
+  const prefix = type === 'rule' ? 'RULE' : type === 'script' ? 'SCRIPT' : 'DT';
+  const name = type === 'rule' ? '规则' : type === 'script' ? '脚本' : '决策表';
+  return {
+    code: `${prefix}_${String(index).padStart(3, '0')}`,
+    name: `${name} ${index}`,
+    description: '',
+  };
+};
 
 // 生成默认列
 const getDefaultColumns = (): Column[] => [
@@ -97,6 +105,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
 
           const loadedTables: DecisionTableState[] = dbTables.map(t => ({
             id: t.id,
+            type: ((t as any).type || 'decision_table') as ComponentType,
             meta: {
               code: t.code,
               name: t.name,
@@ -106,6 +115,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
             rules: (t.rules as unknown as Rule[]) || [],
             notes: t.notes || '',
             testCases: casesMap.get(t.id) || [],
+            config: ((t as any).config || {}) as ComponentConfig,
           }));
 
           setTables(loadedTables);
@@ -116,27 +126,30 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
           const initialRules = getDefaultRules(initialColumns);
           const defaultTable: DecisionTableState = {
             id: generateId(),
+            type: 'decision_table',
             meta: getDefaultMeta(1),
             columns: initialColumns,
             rules: initialRules,
             notes: '',
             testCases: [],
+            config: {},
           };
           setTables([defaultTable]);
           setActiveTableId(defaultTable.id);
         }
       } catch (e) {
         console.error('Failed to load decision tables:', e);
-        // 出错时也创建默认表
         const initialColumns = getDefaultColumns();
         const initialRules = getDefaultRules(initialColumns);
         const defaultTable: DecisionTableState = {
           id: generateId(),
+          type: 'decision_table',
           meta: getDefaultMeta(1),
           columns: initialColumns,
           rules: initialRules,
           notes: '',
           testCases: [],
+          config: {},
         };
         setTables([defaultTable]);
         setActiveTableId(defaultTable.id);
@@ -149,26 +162,28 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
   // 获取当前活动表
   const activeTable = tables.find(t => t.id === activeTableId) || null;
 
-  // 创建新表 - 使用 setState 回调获取最新长度，避免依赖 tables.length
+  // 创建新表
   const createTable = useCallback((data?: Partial<Omit<DecisionTableState, 'id'>>): string => {
     const newId = generateId();
-    const newColumns = data?.columns || getDefaultColumns();
-    const newRules = data?.rules || getDefaultRules(newColumns);
+    const componentType = data?.type || 'decision_table';
+    const newColumns = componentType === 'decision_table' ? (data?.columns || getDefaultColumns()) : [];
+    const newRules = componentType === 'decision_table' ? (data?.rules || getDefaultRules(newColumns)) : [];
     
     setTables(prev => {
       const newTable: DecisionTableState = {
         id: newId,
-        meta: data?.meta || getDefaultMeta(prev.length + 1),
+        type: componentType,
+        meta: data?.meta || getDefaultMeta(prev.length + 1, componentType),
         columns: newColumns,
         rules: newRules,
         notes: data?.notes || '',
         testCases: data?.testCases || [],
+        config: data?.config || {},
       };
       return [...prev, newTable];
     });
     
     setActiveTableId(newId);
-    
     return newId;
   }, []);
 
@@ -181,7 +196,6 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
 
   // 删除表
   const deleteTable = useCallback((id: string) => {
-    // 同步删除数据库记录
     supabase.from('decision_table_test_cases').delete().eq('table_id', id).then(() => {
       supabase.from('decision_tables').delete().eq('id', id).then(({ error }) => {
         if (error) console.error('Failed to delete decision table from DB:', error);
@@ -190,19 +204,16 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
 
     setTables(prev => {
       const newTables = prev.filter(t => t.id !== id);
-      
-      // 如果删除的是当前活动表，切换到其他表
       if (activeTableId === id) {
         const deletedIndex = prev.findIndex(t => t.id === id);
         const newActiveIndex = Math.min(deletedIndex, newTables.length - 1);
         setActiveTableId(newTables[newActiveIndex]?.id || null);
       }
-      
       return newTables;
     });
   }, [activeTableId]);
 
-  // 设置活动表 - use functional check to avoid stale closure
+  // 设置活动表
   const setActiveTable = useCallback((id: string | null) => {
     if (id === null) {
       setActiveTableId(null);
@@ -216,20 +227,23 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
     }
   }, []);
 
-  // 获取表摘要（供 AI 上下文使用）
+  // 获取表摘要
   const getTableSummary = useCallback((): string => {
-    if (tables.length === 0) {
-      return '当前工作区没有决策表。';
-    }
+    if (tables.length === 0) return '当前工作区没有组件。';
     
+    const typeLabels: Record<string, string> = { decision_table: '决策表', rule: '规则', script: '脚本' };
     const tableList = tables.map((t, i) => {
-      const inputCount = t.columns.filter(c => c.isInput).length;
-      const outputCount = t.columns.filter(c => !c.isInput).length;
+      const typeName = typeLabels[t.type] || '决策表';
       const isActive = t.id === activeTableId;
-      return `${i + 1}. ${t.meta.code} - ${t.meta.name}（${inputCount}个输入，${outputCount}个输出，${t.rules.length}条规则）${isActive ? ' [当前]' : ''}`;
+      if (t.type === 'decision_table') {
+        const inputCount = t.columns.filter(c => c.isInput).length;
+        const outputCount = t.columns.filter(c => !c.isInput).length;
+        return `${i + 1}. [${typeName}] ${t.meta.code} - ${t.meta.name}（${inputCount}个输入，${outputCount}个输出，${t.rules.length}条规则）${isActive ? ' [当前]' : ''}`;
+      }
+      return `${i + 1}. [${typeName}] ${t.meta.code} - ${t.meta.name}${isActive ? ' [当前]' : ''}`;
     }).join('\n');
     
-    return `当前工作区有 ${tables.length} 个决策表：\n${tableList}`;
+    return `当前工作区有 ${tables.length} 个组件：\n${tableList}`;
   }, [tables, activeTableId]);
 
   // 根据 ID 获取表
@@ -252,7 +266,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
   if (!loaded) {
     return (
       <div className="h-screen flex items-center justify-center text-muted-foreground text-sm">
-        加载决策表中…
+        加载中…
       </div>
     );
   }
