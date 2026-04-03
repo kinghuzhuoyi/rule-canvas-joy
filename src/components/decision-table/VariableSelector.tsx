@@ -171,7 +171,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect, on
             {/* Decision table outputs section */}
             {outputItems.length > 0 && (
               <>
-                <div className="text-[10px] font-medium text-muted-foreground uppercase px-3 py-1 mt-1">决策表输出</div>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase px-3 py-1 mt-1">组件输出</div>
                 {outputItems.map(item => (
                   <button
                     key={item.id}
