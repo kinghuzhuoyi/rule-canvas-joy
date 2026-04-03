@@ -159,6 +159,32 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
     })();
   }, []);
 
+  // Auto-save tables to database (debounced)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      tables.forEach(async (t) => {
+        const { error } = await supabase
+          .from('decision_tables')
+          .upsert({
+            id: t.id,
+            code: t.meta.code,
+            name: t.meta.name,
+            description: t.meta.description,
+            columns: t.columns as any,
+            rules: t.rules as any,
+            notes: t.notes,
+            type: t.type,
+            config: t.config as any,
+          }, { onConflict: 'id' });
+        if (error) console.error('Failed to save table:', t.id, error);
+      });
+    }, 1500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [tables, loaded]);
+
   // 获取当前活动表
   const activeTable = tables.find(t => t.id === activeTableId) || null;
 
