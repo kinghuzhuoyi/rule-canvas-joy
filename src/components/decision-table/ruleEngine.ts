@@ -1,4 +1,4 @@
-import { Column, Rule, DataType } from './types';
+import { Column, Rule, DataType, ConditionNode, RuleComponentConfig, ScriptComponentConfig } from './types';
 
 // 解析区间表达式
 interface RangeExpression {
