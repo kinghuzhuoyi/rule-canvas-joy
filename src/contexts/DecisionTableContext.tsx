@@ -191,7 +191,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
 
   // 创建新表
   const createTable = useCallback((data?: Partial<Omit<DecisionTableState, 'id'>>): string => {
-    const newId = generateId();
+    const newId = generateUUID();
     const componentType = data?.type || 'decision_table';
     const newColumns = componentType === 'decision_table' ? (data?.columns || getDefaultColumns()) : [];
     const newRules = componentType === 'decision_table' ? (data?.rules || getDefaultRules(newColumns)) : [];
