@@ -1,6 +1,79 @@
 // 数据类型定义
 export type DataType = 'string' | 'integer' | 'decimal' | 'boolean';
 
+// 组件类型
+export type ComponentType = 'decision_table' | 'rule' | 'script';
+
+// 组件类型显示名称
+export const COMPONENT_TYPE_LABELS: Record<ComponentType, string> = {
+  decision_table: '决策表',
+  rule: '规则',
+  script: '脚本',
+};
+
+// 规则组件 - 条件树节点
+export interface ConditionNode {
+  id: string;
+  type: 'group' | 'condition';
+  operator?: 'and' | 'or';           // group 时
+  children?: ConditionNode[];         // group 时
+  leftInput?: string;                 // condition 时 (变量/组件输出引用)
+  comparator?: string;                // >, <, ==, >=, <=, !=, contains, in
+  rightValue?: string;                // 右侧值
+}
+
+export interface RuleComponentConfig {
+  conditionTree: ConditionNode;
+}
+
+// 脚本组件 - 输出定义 + 代码
+export interface ScriptOutput {
+  id: string;
+  code: string;
+  name: string;
+  dataType: DataType;
+}
+
+export interface ScriptComponentConfig {
+  outputs: ScriptOutput[];
+  script: string;
+}
+
+export type ComponentConfig = RuleComponentConfig | ScriptComponentConfig | Record<string, never>;
+
+// 比较运算符定义
+export const COMPARATORS_BY_TYPE: Record<DataType, { value: string; label: string }[]> = {
+  string: [
+    { value: '==', label: '等于' },
+    { value: '!=', label: '不等于' },
+    { value: 'contains', label: '包含' },
+    { value: 'not_contains', label: '不包含' },
+    { value: 'starts_with', label: '开头是' },
+    { value: 'ends_with', label: '结尾是' },
+    { value: 'in', label: '在列表中' },
+  ],
+  integer: [
+    { value: '==', label: '等于' },
+    { value: '!=', label: '不等于' },
+    { value: '>', label: '大于' },
+    { value: '>=', label: '大于等于' },
+    { value: '<', label: '小于' },
+    { value: '<=', label: '小于等于' },
+  ],
+  decimal: [
+    { value: '==', label: '等于' },
+    { value: '!=', label: '不等于' },
+    { value: '>', label: '大于' },
+    { value: '>=', label: '大于等于' },
+    { value: '<', label: '小于' },
+    { value: '<=', label: '小于等于' },
+  ],
+  boolean: [
+    { value: '==', label: '等于' },
+    { value: '!=', label: '不等于' },
+  ],
+};
+
 // 变量定义（用于输入列）
 export interface Variable {
   id: string;
