@@ -45,22 +45,49 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect, on
         group: 'variable' as const,
       }));
       
-      // Build output items from other decision tables
+      // Build output items from other components (decision tables, scripts, rules)
       const currentTableId = excludeTableId || activeTableId;
       const outputItems: SelectableItem[] = [];
       tables.forEach(t => {
         if (t.id === currentTableId) return;
-        const outputCols = t.columns.filter(c => !c.isInput);
-        outputCols.forEach(col => {
+        const componentType = (t as any).type || 'decision_table';
+        
+        if (componentType === 'decision_table') {
+          const outputCols = t.columns.filter(c => !c.isInput);
+          outputCols.forEach(col => {
+            outputItems.push({
+              id: `output_${t.id}_${col.id}`,
+              name: `${t.meta.code}.${col.name}`,
+              label: `${t.meta.name} → ${col.name}`,
+              dataType: col.dataType || 'string',
+              group: 'output',
+              sourceTable: t.meta.code,
+            });
+          });
+        } else if (componentType === 'script') {
+          const config = (t as any).config as any;
+          if (config?.outputs) {
+            config.outputs.forEach((o: any) => {
+              outputItems.push({
+                id: `output_${t.id}_${o.id || o.code}`,
+                name: `${t.meta.code}.${o.code}`,
+                label: `${t.meta.name} → ${o.name}`,
+                dataType: o.dataType || 'string',
+                group: 'output',
+                sourceTable: t.meta.code,
+              });
+            });
+          }
+        } else if (componentType === 'rule') {
           outputItems.push({
-            id: `output_${t.id}_${col.id}`,
-            name: `${t.meta.code}.${col.name}`,
-            label: `${t.meta.name} → ${col.name}`,
-            dataType: col.dataType || 'string',
+            id: `output_${t.id}_result`,
+            name: `${t.meta.code}.result`,
+            label: `${t.meta.name} → 结果`,
+            dataType: 'boolean',
             group: 'output',
             sourceTable: t.meta.code,
           });
-        });
+        }
       });
       
       setItems([...variableItems, ...outputItems]);
@@ -144,7 +171,7 @@ export const VariableSelector: React.FC<VariableSelectorProps> = ({ onSelect, on
             {/* Decision table outputs section */}
             {outputItems.length > 0 && (
               <>
-                <div className="text-[10px] font-medium text-muted-foreground uppercase px-3 py-1 mt-1">决策表输出</div>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase px-3 py-1 mt-1">组件输出</div>
                 {outputItems.map(item => (
                   <button
                     key={item.id}
