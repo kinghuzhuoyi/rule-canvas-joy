@@ -77,34 +77,40 @@ export type Database = {
         Row: {
           code: string
           columns: Json
+          config: Json
           created_at: string
           description: string | null
           id: string
           name: string
           notes: string | null
           rules: Json
+          type: string
           updated_at: string
         }
         Insert: {
           code: string
           columns?: Json
+          config?: Json
           created_at?: string
           description?: string | null
           id?: string
           name: string
           notes?: string | null
           rules?: Json
+          type?: string
           updated_at?: string
         }
         Update: {
           code?: string
           columns?: Json
+          config?: Json
           created_at?: string
           description?: string | null
           id?: string
           name?: string
           notes?: string | null
           rules?: Json
+          type?: string
           updated_at?: string
         }
         Relationships: []
