@@ -167,7 +167,6 @@ export function compareOutputs(
     
     let match = false;
     if (!expectedVal) {
-      // 没有预期值则视为通过
       match = true;
     } else if (col.dataType === 'integer' || col.dataType === 'decimal') {
       match = parseFloat(expectedVal) === parseFloat(actualVal);
@@ -182,4 +181,87 @@ export function compareOutputs(
   }
   
   return { passed: allMatch, details };
+}
+
+// ===== 规则组件执行 =====
+
+function evaluateConditionNode(node: ConditionNode, inputs: Record<string, unknown>): boolean {
+  if (node.type === 'condition') {
+    const leftKey = node.leftInput || '';
+    const leftValue = inputs[leftKey];
+    const rightValue = node.rightValue || '';
+    const comparator = node.comparator || '==';
+
+    const leftStr = leftValue === null || leftValue === undefined ? '' : String(leftValue);
+
+    switch (comparator) {
+      case '==': return leftStr === rightValue;
+      case '!=': return leftStr !== rightValue;
+      case '>': return parseFloat(leftStr) > parseFloat(rightValue);
+      case '>=': return parseFloat(leftStr) >= parseFloat(rightValue);
+      case '<': return parseFloat(leftStr) < parseFloat(rightValue);
+      case '<=': return parseFloat(leftStr) <= parseFloat(rightValue);
+      case 'contains': return leftStr.includes(rightValue);
+      case 'not_contains': return !leftStr.includes(rightValue);
+      case 'starts_with': return leftStr.startsWith(rightValue);
+      case 'ends_with': return leftStr.endsWith(rightValue);
+      case 'in': {
+        const list = rightValue.split(',').map(s => s.trim());
+        return list.includes(leftStr);
+      }
+      default: return leftStr === rightValue;
+    }
+  }
+
+  if (node.type === 'group' && node.children) {
+    if (node.operator === 'or') {
+      return node.children.some(c => evaluateConditionNode(c, inputs));
+    }
+    // default AND
+    return node.children.every(c => evaluateConditionNode(c, inputs));
+  }
+
+  return false;
+}
+
+export function evaluateRuleComponent(
+  config: RuleComponentConfig,
+  inputs: Record<string, unknown>
+): { result: boolean } {
+  if (!config?.conditionTree) return { result: false };
+  return { result: evaluateConditionNode(config.conditionTree, inputs) };
+}
+
+// ===== 脚本组件执行 =====
+
+export function evaluateScriptComponent(
+  config: ScriptComponentConfig,
+  inputs: Record<string, unknown>
+): Record<string, unknown> {
+  if (!config?.script) return {};
+
+  try {
+    // Build a safe function from the script
+    const inputKeys = Object.keys(inputs);
+    const inputValues = Object.values(inputs);
+
+    // Wrap the script in a function
+    const fn = new Function(...inputKeys, config.script);
+    const result = fn(...inputValues);
+
+    // If script returns a single value and there's one output, map it
+    if (config.outputs.length === 1 && typeof result !== 'object') {
+      return { [config.outputs[0].code]: result };
+    }
+
+    // If result is an object, use it directly
+    if (typeof result === 'object' && result !== null) {
+      return result as Record<string, unknown>;
+    }
+
+    return { result };
+  } catch (e) {
+    console.error('Script execution error:', e);
+    return { _error: String(e) };
+  }
 }
