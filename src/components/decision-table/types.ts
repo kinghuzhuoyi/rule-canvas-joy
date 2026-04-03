@@ -192,9 +192,22 @@ export const DATA_TYPE_ICONS: Record<DataType, { icon: string; color: string }> 
   boolean: { icon: '⊤', color: 'text-purple-500' },
 };
 
-// 生成唯一ID
+// 生成唯一ID（用于非数据库实体如列、规则行、条件节点等）
 export const generateId = (): string => {
   return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+// 生成 UUID（用于数据库实体如决策表、测试用例等）
+export const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // fallback
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 };
 
 // 验证区间表达式
