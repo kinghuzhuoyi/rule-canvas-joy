@@ -126,7 +126,7 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
           const initialColumns = getDefaultColumns();
           const initialRules = getDefaultRules(initialColumns);
           const defaultTable: DecisionTableState = {
-            id: generateId(),
+            id: generateUUID(),
             type: 'decision_table',
             meta: getDefaultMeta(1),
             columns: initialColumns,
