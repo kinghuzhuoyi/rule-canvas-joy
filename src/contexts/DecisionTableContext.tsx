@@ -104,20 +104,49 @@ export function DecisionTableProvider({ children }: DecisionTableProviderProps) 
             casesMap.set(c.table_id, list);
           });
 
-          const loadedTables: DecisionTableState[] = dbTables.map(t => ({
-            id: t.id,
-            type: ((t as any).type || 'decision_table') as ComponentType,
-            meta: {
-              code: t.code,
-              name: t.name,
-              description: t.description || '',
-            },
-            columns: (t.columns as unknown as Column[]) || [],
-            rules: (t.rules as unknown as Rule[]) || [],
-            notes: t.notes || '',
-            testCases: casesMap.get(t.id) || [],
-            config: ((t as any).config || {}) as ComponentConfig,
-          }));
+          const loadedTables: DecisionTableState[] = dbTables.map(t => {
+            // Normalize columns: ensure every column has an `id`
+            const rawColumns = (t.columns as unknown as any[]) || [];
+            const columns: Column[] = rawColumns.map(c => ({
+              ...c,
+              id: c.id || generateId(),
+            }));
+
+            // Build a name->id map for legacy rule normalization
+            const nameToId = new Map<string, string>();
+            columns.forEach(c => { if (c.name) nameToId.set(c.name, c.id); });
+
+            // Normalize rules: support legacy flat shape { [colName]: value }
+            const rawRules = (t.rules as unknown as any[]) || [];
+            const rules: Rule[] = rawRules.map(r => {
+              if (r && typeof r === 'object' && r.cells && typeof r.cells === 'object') {
+                return { id: r.id || generateId(), cells: r.cells };
+              }
+              // Legacy: keys are column names
+              const cells: Record<string, string> = {};
+              Object.entries(r || {}).forEach(([k, v]) => {
+                if (k === 'id') return;
+                const colId = nameToId.get(k);
+                if (colId) cells[colId] = String(v ?? '');
+              });
+              return { id: (r && r.id) || generateId(), cells };
+            });
+
+            return {
+              id: t.id,
+              type: ((t as any).type || 'decision_table') as ComponentType,
+              meta: {
+                code: t.code,
+                name: t.name,
+                description: t.description || '',
+              },
+              columns,
+              rules,
+              notes: t.notes || '',
+              testCases: casesMap.get(t.id) || [],
+              config: ((t as any).config || {}) as ComponentConfig,
+            };
+          });
 
           setTables(loadedTables);
           setActiveTableId(loadedTables[0].id);
