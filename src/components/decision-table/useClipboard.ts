@@ -10,11 +10,13 @@ interface UseClipboardProps {
 }
 
 interface UseClipboardReturn {
-  copySelectedCells: () => void;
-  pasteFromClipboard: () => Promise<void>;
+  copySelectedCells: () => Promise<boolean>;
+  pasteFromClipboard: () => Promise<boolean>;
+  pasteText: (text: string) => void;
   deleteSelectedCells: () => void;
   exportToMarkdown: () => string;
   importFromExcel: (text: string) => void;
+  copyText: (text: string) => Promise<boolean>;
 }
 
 export const useClipboard = ({
