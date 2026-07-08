@@ -116,9 +116,11 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   const {
     copySelectedCells,
     pasteFromClipboard,
+    pasteText,
     deleteSelectedCells,
     exportToMarkdown,
     importFromExcel,
+    copyText,
   } = useClipboard({
     columns,
     rules,
@@ -142,28 +144,57 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedCells.size === 0) return;
-      
+
+      // 如果焦点在输入框内，不劫持
+      const target = e.target as HTMLElement | null;
+      const inEditable = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (inEditable) return;
         e.preventDefault();
         deleteSelectedCells();
       } else if (e.ctrlKey || e.metaKey) {
         if (e.key === 'c') {
+          if (inEditable) return;
           e.preventDefault();
-          copySelectedCells();
-          toast({ description: '已复制到剪贴板' });
-        } else if (e.key === 'v') {
-          e.preventDefault();
-          pasteFromClipboard();
-        } else if (e.key === 'a') {
-          e.preventDefault();
-          // selectAll handled by useTableSelection
+          copySelectedCells().then(ok => {
+            toast({
+              description: ok ? '已复制到剪贴板' : '复制失败，请检查浏览器权限',
+              variant: ok ? undefined : 'destructive',
+            });
+          });
         }
+        // Ctrl+V 不 preventDefault，让原生 paste 事件触发
       }
     };
-    
+
+    const handlePaste = (e: ClipboardEvent) => {
+      if (selectedCells.size === 0) return;
+      const target = e.target as HTMLElement | null;
+      const inEditable = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+      if (inEditable) return;
+      const text = e.clipboardData?.getData('text/plain');
+      if (!text) return;
+      e.preventDefault();
+      pasteText(text);
+      toast({ description: '已粘贴数据' });
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedCells, copySelectedCells, pasteFromClipboard, deleteSelectedCells, toast]);
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [selectedCells, copySelectedCells, pasteText, deleteSelectedCells, toast]);
   
   // 拖拽传感器
   const sensors = useSensors(
@@ -277,37 +308,66 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   }, []);
   
   // 复制为 Markdown
-  const handleExportMarkdown = () => {
+  const handleExportMarkdown = async () => {
     const markdown = exportToMarkdown();
-    navigator.clipboard.writeText(markdown);
-    toast({ description: '已复制 Markdown 到剪贴板' });
+    const ok = await copyText(markdown);
+    toast({
+      description: ok ? '已复制 Markdown 到剪贴板' : '复制失败，请检查浏览器权限',
+      variant: ok ? undefined : 'destructive',
+    });
   };
-  
+
+  const handleCopyClick = async () => {
+    if (selectedCells.size === 0) {
+      toast({ variant: 'destructive', description: '请先选中要复制的单元格' });
+      return;
+    }
+    const ok = await copySelectedCells();
+    toast({
+      description: ok ? '已复制到剪贴板' : '复制失败，请检查浏览器权限',
+      variant: ok ? undefined : 'destructive',
+    });
+  };
+
+  const handlePasteClick = async () => {
+    if (selectedCells.size === 0) {
+      toast({ variant: 'destructive', description: '请先选中起始单元格' });
+      return;
+    }
+    const ok = await pasteFromClipboard();
+    if (ok) {
+      toast({ description: '已粘贴数据' });
+    } else {
+      toast({ description: '当前环境无法直接读取剪贴板，请按 Ctrl/⌘ + V 粘贴' });
+    }
+  };
+
   // 从 Excel 粘贴
   const handleImportFromClipboard = async () => {
     try {
+      if (!navigator.clipboard?.readText) throw new Error('unavailable');
       const text = await navigator.clipboard.readText();
       importFromExcel(text);
       toast({ description: '已从剪贴板导入数据' });
     } catch {
-      toast({ variant: 'destructive', description: '读取剪贴板失败' });
+      toast({ description: '当前环境无法直接读取剪贴板，请聚焦表格后按 Ctrl/⌘ + V 粘贴' });
     }
   };
 
   const inputColumnCount = columns.filter(c => c.isInput).length;
   const outputColumnCount = columns.filter(c => !c.isInput).length;
-  
+
   return (
     <div className={cn("flex flex-col bg-card rounded-lg border border-border shadow-sm overflow-hidden", className)}>
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border">
         <h3 className="font-semibold text-foreground">决策表编辑器</h3>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1" onClick={copySelectedCells}>
+          <Button variant="outline" size="sm" className="gap-1" onClick={handleCopyClick}>
             <Copy className="h-4 w-4" />
             <span className="hidden sm:inline">复制</span>
           </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={pasteFromClipboard}>
+          <Button variant="outline" size="sm" className="gap-1" onClick={handlePasteClick}>
             <ClipboardPaste className="h-4 w-4" />
             <span className="hidden sm:inline">粘贴</span>
           </Button>
