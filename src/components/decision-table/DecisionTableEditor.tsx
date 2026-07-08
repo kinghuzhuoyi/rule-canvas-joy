@@ -145,21 +145,22 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedCells.size === 0) return;
 
-      // 如果焦点在输入框内，不劫持
       const target = e.target as HTMLElement | null;
-      const inEditable = target && (
+      const inEditable = !!target && (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
       );
+      // 多单元格选中时，即便焦点在 Input 也要接管，避免只复制单个输入框
+      const multi = selectedCells.size > 1;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (inEditable) return;
+        if (inEditable && !multi) return;
         e.preventDefault();
         deleteSelectedCells();
       } else if (e.ctrlKey || e.metaKey) {
         if (e.key === 'c') {
-          if (inEditable) return;
+          if (inEditable && !multi) return;
           e.preventDefault();
           copySelectedCells().then(ok => {
             toast({
@@ -168,19 +169,20 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
             });
           });
         }
-        // Ctrl+V 不 preventDefault，让原生 paste 事件触发
+        // Ctrl+V 交给原生 paste 事件
       }
     };
 
     const handlePaste = (e: ClipboardEvent) => {
       if (selectedCells.size === 0) return;
       const target = e.target as HTMLElement | null;
-      const inEditable = target && (
+      const inEditable = !!target && (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
       );
-      if (inEditable) return;
+      const multi = selectedCells.size > 1;
+      if (inEditable && !multi) return;
       const text = e.clipboardData?.getData('text/plain');
       if (!text) return;
       e.preventDefault();
