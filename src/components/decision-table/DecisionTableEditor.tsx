@@ -144,28 +144,57 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedCells.size === 0) return;
-      
+
+      // 如果焦点在输入框内，不劫持
+      const target = e.target as HTMLElement | null;
+      const inEditable = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (inEditable) return;
         e.preventDefault();
         deleteSelectedCells();
       } else if (e.ctrlKey || e.metaKey) {
         if (e.key === 'c') {
+          if (inEditable) return;
           e.preventDefault();
-          copySelectedCells();
-          toast({ description: '已复制到剪贴板' });
-        } else if (e.key === 'v') {
-          e.preventDefault();
-          pasteFromClipboard();
-        } else if (e.key === 'a') {
-          e.preventDefault();
-          // selectAll handled by useTableSelection
+          copySelectedCells().then(ok => {
+            toast({
+              description: ok ? '已复制到剪贴板' : '复制失败，请检查浏览器权限',
+              variant: ok ? undefined : 'destructive',
+            });
+          });
         }
+        // Ctrl+V 不 preventDefault，让原生 paste 事件触发
       }
     };
-    
+
+    const handlePaste = (e: ClipboardEvent) => {
+      if (selectedCells.size === 0) return;
+      const target = e.target as HTMLElement | null;
+      const inEditable = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+      if (inEditable) return;
+      const text = e.clipboardData?.getData('text/plain');
+      if (!text) return;
+      e.preventDefault();
+      pasteText(text);
+      toast({ description: '已粘贴数据' });
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedCells, copySelectedCells, pasteFromClipboard, deleteSelectedCells, toast]);
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [selectedCells, copySelectedCells, pasteText, deleteSelectedCells, toast]);
   
   // 拖拽传感器
   const sensors = useSensors(
