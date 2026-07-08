@@ -211,8 +211,10 @@ export const useClipboard = ({
   return {
     copySelectedCells,
     pasteFromClipboard,
+    pasteText,
     deleteSelectedCells,
     exportToMarkdown,
     importFromExcel,
+    copyText,
   };
 };
