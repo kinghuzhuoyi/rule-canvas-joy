@@ -116,9 +116,11 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   const {
     copySelectedCells,
     pasteFromClipboard,
+    pasteText,
     deleteSelectedCells,
     exportToMarkdown,
     importFromExcel,
+    copyText,
   } = useClipboard({
     columns,
     rules,
