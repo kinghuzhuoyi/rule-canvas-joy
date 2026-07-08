@@ -27,12 +27,36 @@ export const useClipboard = ({
   clearSelection,
 }: UseClipboardProps): UseClipboardReturn => {
   
-  const copySelectedCells = useCallback(() => {
+  const copyText = useCallback(async (text: string): Promise<boolean> => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      throw new Error('clipboard api unavailable');
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch {
+        return false;
+      }
+    }
+  }, []);
+
+  const copySelectedCells = useCallback(async (): Promise<boolean> => {
     const range = getSelectedRange();
-    if (!range) return;
-    
+    if (!range) return false;
+
     const { startRuleIndex, endRuleIndex, startColumnIndex, endColumnIndex } = range;
-    
+
     const lines: string[] = [];
     for (let r = startRuleIndex; r <= endRuleIndex; r++) {
       const row: string[] = [];
@@ -43,56 +67,71 @@ export const useClipboard = ({
       }
       lines.push(row.join('\t'));
     }
-    
-    navigator.clipboard.writeText(lines.join('\n'));
-  }, [columns, rules, getSelectedRange]);
-  
-  const pasteFromClipboard = useCallback(async () => {
+
+    return copyText(lines.join('\n'));
+  }, [columns, rules, getSelectedRange, copyText]);
+
+  const pasteText = useCallback((text: string) => {
     const range = getSelectedRange();
     if (!range) return;
-    
-    try {
-      const text = await navigator.clipboard.readText();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length === 0) return;
-      
-      const { startRuleIndex, startColumnIndex } = range;
-      
-      setRules(prevRules => {
-        const newRules = [...prevRules];
-        
-        lines.forEach((line, lineIdx) => {
-          const ruleIdx = startRuleIndex + lineIdx;
-          const values = line.split('\t');
-          
-          // 如果需要新增行
-          if (ruleIdx >= newRules.length) {
-            const newRule: Rule = {
-              id: generateId(),
-              cells: {},
-            };
-            columns.forEach(col => {
-              newRule.cells[col.id] = '';
-            });
-            newRules.push(newRule);
-          }
-          
-          values.forEach((value, colIdx) => {
-            const columnIdx = startColumnIndex + colIdx;
-            if (columnIdx < columns.length) {
-              const columnId = columns[columnIdx].id;
-              newRules[ruleIdx].cells[columnId] = value.trim();
-            }
+
+    const lines = text.split(/\r?\n/).filter(line => line.length > 0);
+    if (lines.length === 0) return;
+
+    const { startRuleIndex, startColumnIndex } = range;
+
+    setRules(prevRules => {
+      const newRules = [...prevRules];
+
+      lines.forEach((line, lineIdx) => {
+        const ruleIdx = startRuleIndex + lineIdx;
+        const values = line.split('\t');
+
+        if (ruleIdx >= newRules.length) {
+          const newRule: Rule = {
+            id: generateId(),
+            cells: {},
+          };
+          columns.forEach(col => {
+            newRule.cells[col.id] = '';
           });
+          newRules.push(newRule);
+        }
+
+        values.forEach((value, colIdx) => {
+          const columnIdx = startColumnIndex + colIdx;
+          if (columnIdx < columns.length) {
+            const columnId = columns[columnIdx].id;
+            newRules[ruleIdx] = {
+              ...newRules[ruleIdx],
+              cells: {
+                ...newRules[ruleIdx].cells,
+                [columnId]: value.trim(),
+              },
+            };
+          }
         });
-        
-        return newRules;
       });
-    } catch (err) {
-      console.error('Failed to paste:', err);
-    }
+
+      return newRules;
+    });
   }, [columns, setRules, getSelectedRange]);
+
+  const pasteFromClipboard = useCallback(async (): Promise<boolean> => {
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        return false;
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text) return false;
+      pasteText(text);
+      return true;
+    } catch (err) {
+      console.warn('clipboard readText blocked, fallback to paste event', err);
+      return false;
+    }
+  }, [pasteText]);
+
   
   const deleteSelectedCells = useCallback(() => {
     const range = getSelectedRange();
