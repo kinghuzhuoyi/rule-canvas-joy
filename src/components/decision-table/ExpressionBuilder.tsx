@@ -91,9 +91,9 @@ const ExprNode: React.FC<NodeProps> = ({ expr, onChange, depth = 0 }) => {
 
   if (expr.kind === 'variable') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-        <VarIcon className="h-3 w-3" />
-        <span className="font-mono">{expr.code}</span>
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 whitespace-nowrap flex-shrink-0 max-w-[180px]">
+        <VarIcon className="h-3 w-3 flex-shrink-0" />
+        <span className="font-mono truncate" title={expr.code}>{expr.code}</span>
         {removeBtn}
       </span>
     );
@@ -101,8 +101,8 @@ const ExprNode: React.FC<NodeProps> = ({ expr, onChange, depth = 0 }) => {
 
   if (expr.kind === 'constant') {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-amber-500/10 border border-amber-500/30">
-        <Hash className="h-3 w-3 text-amber-600" />
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-amber-500/10 border border-amber-500/30 whitespace-nowrap flex-shrink-0">
+        <Hash className="h-3 w-3 text-amber-600 flex-shrink-0" />
         {expr.dataType === 'boolean' ? (
           <Select
             value={expr.value || 'true'}
@@ -131,8 +131,8 @@ const ExprNode: React.FC<NodeProps> = ({ expr, onChange, depth = 0 }) => {
 
   // function
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-purple-500/10 border border-purple-500/30">
-      <Sigma className="h-3 w-3 text-purple-600" />
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-purple-500/10 border border-purple-500/30 whitespace-nowrap flex-shrink-0">
+      <Sigma className="h-3 w-3 text-purple-600 flex-shrink-0" />
       <span className="font-mono font-medium">{expr.name}</span>
       <span>(</span>
       {expr.args.map((arg, i) => (
@@ -154,6 +154,7 @@ const ExprNode: React.FC<NodeProps> = ({ expr, onChange, depth = 0 }) => {
     </span>
   );
 };
+
 
 const PickerMenu: React.FC<{
   onPickVariable: (v: VariableType) => void;
@@ -241,14 +242,15 @@ export const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 p-3 w-[360px] max-w-[calc(100vw-2rem)]">
+    <div className="flex flex-col gap-3 p-3 w-[420px] max-w-[calc(100vw-2rem)]">
       <div className="text-xs font-medium text-muted-foreground">构建输入表达式</div>
-      <div className="min-h-[36px] max-h-[240px] overflow-auto p-2 rounded border border-border bg-muted/30 flex flex-wrap items-center gap-1 break-all">
+      <div className="min-h-[44px] max-h-[200px] overflow-auto p-2 rounded border border-border bg-muted/30 flex items-center gap-1 whitespace-nowrap">
         <ExprNode
           expr={expr}
           onChange={(next) => setExpr(next)}
         />
       </div>
+
 
       {expr && (
         <div className="text-xs text-muted-foreground font-mono px-1">

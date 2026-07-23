@@ -191,6 +191,7 @@ export const CellInput: React.FC<CellInputProps> = ({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onMouseDown={onMouseDown}
+        title={localValue || undefined}
         className={cn(
           "h-full border-0 rounded-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
           "bg-transparent text-sm pr-7",
@@ -198,6 +199,7 @@ export const CellInput: React.FC<CellInputProps> = ({
         )}
         placeholder={getPlaceholder(dataType, isInput)}
       />
+
       
       {/* 验证状态图标 */}
       {localValue.trim() && !isFocused && (
