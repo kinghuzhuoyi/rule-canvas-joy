@@ -81,31 +81,43 @@ export const useClipboard = ({
     const { startRuleIndex, startColumnIndex } = range;
 
     setRules(prevRules => {
-      const newRules = [...prevRules];
+      // 拆分普通行与兜底行，粘贴仅作用于普通行，超出部分自动新增到兜底行之前
+      const normalRules = prevRules.filter(r => !r.isFallback);
+      const fallbackRules = prevRules.filter(r => r.isFallback);
+
+      // 计算相对于普通行的起始索引
+      // startRuleIndex 是原数组索引，需换算：若起点落在兜底行，则改到最后一条普通行之后（追加新行）
+      let normalStart = startRuleIndex;
+      const originalRule = prevRules[startRuleIndex];
+      if (originalRule?.isFallback) {
+        normalStart = normalRules.length;
+      } else if (originalRule) {
+        normalStart = normalRules.findIndex(r => r.id === originalRule.id);
+        if (normalStart < 0) normalStart = normalRules.length;
+      }
+
+      const newNormal = [...normalRules];
 
       lines.forEach((line, lineIdx) => {
-        const ruleIdx = startRuleIndex + lineIdx;
+        const ruleIdx = normalStart + lineIdx;
         const values = line.split('\t');
 
-        if (ruleIdx >= newRules.length) {
+        while (ruleIdx >= newNormal.length) {
           const newRule: Rule = {
             id: generateId(),
-            cells: {},
+            cells: columns.reduce((acc, col) => ({ ...acc, [col.id]: '' }), {}),
           };
-          columns.forEach(col => {
-            newRule.cells[col.id] = '';
-          });
-          newRules.push(newRule);
+          newNormal.push(newRule);
         }
 
         values.forEach((value, colIdx) => {
           const columnIdx = startColumnIndex + colIdx;
           if (columnIdx < columns.length) {
             const columnId = columns[columnIdx].id;
-            newRules[ruleIdx] = {
-              ...newRules[ruleIdx],
+            newNormal[ruleIdx] = {
+              ...newNormal[ruleIdx],
               cells: {
-                ...newRules[ruleIdx].cells,
+                ...newNormal[ruleIdx].cells,
                 [columnId]: value.trim(),
               },
             };
@@ -113,7 +125,7 @@ export const useClipboard = ({
         });
       });
 
-      return newRules;
+      return [...newNormal, ...fallbackRules];
     });
   }, [columns, setRules, getSelectedRange]);
 
