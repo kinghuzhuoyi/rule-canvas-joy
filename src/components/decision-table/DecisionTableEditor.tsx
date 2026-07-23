@@ -191,7 +191,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('paste', handlePaste);
     };
-  }, [selectedCells, copySelectedCells, pasteText, deleteSelectedCells, toast]);
+  }, [selectedCells, copySelectedCells, pasteText, deleteSelectedCells, toast, readOnly]);
   
   // 拖拽传感器
   const sensors = useSensors(
