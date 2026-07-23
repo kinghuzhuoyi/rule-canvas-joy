@@ -29,6 +29,7 @@ interface DecisionTableEditorProps {
   initialData?: { columns: Column[]; rules: Rule[] };
   onChange?: (data: { columns: Column[]; rules: Rule[] }) => void;
   highlightedRuleId?: string | null;
+  defaultMode?: 'view' | 'edit';
 }
 
 // 默认初始数据（空表：由用户点击 + 添加列和行）
