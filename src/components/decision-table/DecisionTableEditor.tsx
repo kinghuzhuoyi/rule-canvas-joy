@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
-import { Plus, Copy, ClipboardPaste, FileText, Shield } from 'lucide-react';
+import { Plus, Copy, ClipboardPaste, FileText, Shield, Pencil, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Column, Rule, InputExpr, DataType, generateId, expressionToString, inferExprDataType } from './types';
 import { TableHeader } from './TableHeader';
@@ -29,6 +29,7 @@ interface DecisionTableEditorProps {
   initialData?: { columns: Column[]; rules: Rule[] };
   onChange?: (data: { columns: Column[]; rules: Rule[] }) => void;
   highlightedRuleId?: string | null;
+  defaultMode?: 'view' | 'edit';
 }
 
 // 默认初始数据（空表：由用户点击 + 添加列和行）
@@ -42,8 +43,11 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   initialData,
   onChange,
   highlightedRuleId,
+  defaultMode = 'view',
 }) => {
   const { toast } = useToast();
+  const [mode, setMode] = useState<'view' | 'edit'>(defaultMode);
+  const readOnly = mode === 'view';
   const [columns, setColumns] = useState<Column[]>(() => initialData?.columns || getDefaultData().columns);
   const [rules, setRules] = useState<Rule[]>(() => initialData?.rules || getDefaultData().rules);
   
@@ -127,6 +131,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (readOnly) return;
       if (selectedCells.size === 0) return;
 
       const target = e.target as HTMLElement | null;
@@ -158,6 +163,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     };
 
     const handlePaste = (e: ClipboardEvent) => {
+      if (readOnly) return;
       if (selectedCells.size === 0) return;
       const text = e.clipboardData?.getData('text/plain');
       if (!text) return;
@@ -185,7 +191,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('paste', handlePaste);
     };
-  }, [selectedCells, copySelectedCells, pasteText, deleteSelectedCells, toast]);
+  }, [selectedCells, copySelectedCells, pasteText, deleteSelectedCells, toast, readOnly]);
   
   // 拖拽传感器
   const sensors = useSensors(
@@ -359,26 +365,48 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     <div className={cn("flex flex-col bg-card rounded-lg border border-border shadow-sm overflow-hidden", className)}>
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border">
-        <h3 className="font-semibold text-foreground">决策表编辑器</h3>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleCopyClick}>
-            <Copy className="h-4 w-4" />
-            <span className="hidden sm:inline">复制</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handlePasteClick}>
-            <ClipboardPaste className="h-4 w-4" />
-            <span className="hidden sm:inline">粘贴</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleExportMarkdown}>
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">导出 Markdown</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleImportFromClipboard}>
-            <ClipboardPaste className="h-4 w-4" />
-            <span className="hidden sm:inline">从 Excel 导入</span>
-          </Button>
+          <h3 className="font-semibold text-foreground">决策表{readOnly ? '查看' : '编辑'}器</h3>
+          <span className={cn(
+            "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border",
+            readOnly ? "border-border text-muted-foreground bg-muted" : "border-primary/30 text-primary bg-primary/10"
+          )}>
+            {readOnly ? <><Eye className="h-3 w-3" /> 查看模式</> : <><Pencil className="h-3 w-3" /> 编辑模式</>}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {readOnly ? (
+            <Button variant="default" size="sm" className="gap-1" onClick={() => setMode('edit')}>
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline">编辑</span>
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleCopyClick}>
+                <Copy className="h-4 w-4" />
+                <span className="hidden sm:inline">复制</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handlePasteClick}>
+                <ClipboardPaste className="h-4 w-4" />
+                <span className="hidden sm:inline">粘贴</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleExportMarkdown}>
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">导出 Markdown</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleImportFromClipboard}>
+                <ClipboardPaste className="h-4 w-4" />
+                <span className="hidden sm:inline">从 Excel 导入</span>
+              </Button>
+              <Button variant="secondary" size="sm" className="gap-1" onClick={() => setMode('view')}>
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">完成</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
+      
       
       {/* 表格区域 */}
       <div className="flex-1 overflow-auto" onClick={e => {
@@ -412,6 +440,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
           onAddOutputColumn={handleAddOutputColumn}
           onEditColumn={handleEditColumn}
           onDeleteColumn={handleDeleteColumn}
+          readOnly={readOnly}
         />
         
         {/* 规则行 */}
@@ -438,6 +467,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
                       onCellMouseEnter={handleCellMouseEnter}
                       canDelete={normalRules.length > 1}
                       isHighlighted={highlightedRuleId === rule.id}
+                      readOnly={readOnly}
                     />
                   ))}
                   {fallbackRule && (
@@ -453,6 +483,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
                       canDelete={false}
                       isHighlighted={highlightedRuleId === fallbackRule.id}
                       isFallback
+                      readOnly={readOnly}
                     />
                   )}
                 </div>
@@ -464,12 +495,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       </div>
       
       {/* 添加规则按钮 */}
-      <div className="flex justify-center py-3 border-t border-border bg-muted/30">
-        <Button variant="outline" size="sm" className="gap-1" onClick={handleAddRule}>
-          <Plus className="h-4 w-4" />
-          添加条件行
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-center py-3 border-t border-border bg-muted/30">
+          <Button variant="outline" size="sm" className="gap-1" onClick={handleAddRule}>
+            <Plus className="h-4 w-4" />
+            添加条件行
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

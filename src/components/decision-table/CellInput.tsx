@@ -13,6 +13,7 @@ interface CellInputProps {
   onChange: (value: string) => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
+  readOnly?: boolean;
 }
 
 // 获取输入提示文本
@@ -53,6 +54,7 @@ export const CellInput: React.FC<CellInputProps> = ({
   onChange,
   onMouseDown,
   onMouseEnter,
+  readOnly = false,
 }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
@@ -156,19 +158,23 @@ export const CellInput: React.FC<CellInputProps> = ({
         onMouseDown={onMouseDown}
         onMouseEnter={onMouseEnter}
       >
-        <Select value={localValue} onValueChange={v => { setLocalValue(v); onChange(v); }}>
-          <SelectTrigger className="h-full border-0 rounded-none focus:ring-0 bg-transparent">
-            <SelectValue placeholder="选择..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="true">
-              <span className="text-green-600 font-medium">true</span>
-            </SelectItem>
-            <SelectItem value="false">
-              <span className="text-red-500 font-medium">false</span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        {readOnly ? (
+          <div className="h-full w-full flex items-center px-3 text-sm">
+            {localValue === 'true' ? <span className="text-green-600 font-medium">true</span>
+              : localValue === 'false' ? <span className="text-red-500 font-medium">false</span>
+              : <span className="text-muted-foreground/50">—</span>}
+          </div>
+        ) : (
+          <Select value={localValue} onValueChange={v => { setLocalValue(v); onChange(v); }}>
+            <SelectTrigger className="h-full border-0 rounded-none focus:ring-0 bg-transparent">
+              <SelectValue placeholder="选择..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true"><span className="text-green-600 font-medium">true</span></SelectItem>
+              <SelectItem value="false"><span className="text-red-500 font-medium">false</span></SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
     );
   }
@@ -191,14 +197,17 @@ export const CellInput: React.FC<CellInputProps> = ({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onMouseDown={onMouseDown}
+        readOnly={readOnly}
         title={localValue || undefined}
         className={cn(
           "h-full border-0 rounded-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
           "bg-transparent text-sm pr-7",
-          error && "text-destructive"
+          error && "text-destructive",
+          readOnly && "cursor-default focus-visible:ring-0"
         )}
-        placeholder={getPlaceholder(dataType, isInput)}
+        placeholder={readOnly ? '' : getPlaceholder(dataType, isInput)}
       />
+
 
       
       {/* 验证状态图标 */}

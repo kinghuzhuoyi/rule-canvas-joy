@@ -13,6 +13,7 @@ interface TableHeaderProps {
   onAddOutputColumn: (name: string, dataType: DataType, insertIndex?: number) => void;
   onEditColumn: (columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => void;
   onDeleteColumn: (columnId: string) => void;
+  readOnly?: boolean;
 }
 
 
@@ -109,7 +110,8 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   onAddInputColumn,
   onAddOutputColumn,
   onEditColumn,
-  onDeleteColumn
+  onDeleteColumn,
+  readOnly = false,
 }) => {
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
   const [editName, setEditName] = useState('');
@@ -138,7 +140,8 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           <span className={cn("font-mono text-xs", typeIcon.color)}>{typeIcon.icon}</span>
           <span className="font-medium text-sm truncate" title={displayName}>{displayName}</span>
 
-          <Popover open={editingColumn?.id === column.id} onOpenChange={open => {
+          <Popover open={!readOnly && editingColumn?.id === column.id} onOpenChange={open => {
+          if (readOnly) return;
           if (open) {
             startEditing(column);
           } else {
@@ -146,7 +149,14 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           }
         }}>
             <PopoverTrigger asChild>
-              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-accent rounded flex-shrink-0">
+              <button
+                disabled={readOnly}
+                className={cn(
+                  "opacity-0 transition-opacity p-0.5 hover:bg-accent rounded flex-shrink-0",
+                  !readOnly && "group-hover:opacity-100",
+                  readOnly && "hidden"
+                )}
+              >
                 <Pencil className="h-3 w-3 text-muted-foreground" />
               </button>
             </PopoverTrigger>
@@ -203,14 +213,18 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
 
       <div className="flex bg-secondary/30">
         {inputColumns.length === 0 ? (
-          <EmptyColumnPlaceholder isInput onAddInput={expr => onAddInputColumn(expr, 0)} />
+          readOnly ? (
+            <div className="w-[140px] flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground/60">无输入</div>
+          ) : (
+            <EmptyColumnPlaceholder isInput onAddInput={expr => onAddInputColumn(expr, 0)} />
+          )
         ) : (
           <>
             {inputColumns.map((col, index) => <React.Fragment key={col.id}>
-                <ColumnDivider isInput={true} insertIndex={index} onAddInput={expr => onAddInputColumn(expr, index)} />
+                {!readOnly && <ColumnDivider isInput={true} insertIndex={index} onAddInput={expr => onAddInputColumn(expr, index)} />}
                 {renderColumnHeader(col, canDeleteInput)}
               </React.Fragment>)}
-            <ColumnDivider isInput={true} insertIndex={inputColumns.length} onAddInput={expr => onAddInputColumn(expr, inputColumns.length)} />
+            {!readOnly && <ColumnDivider isInput={true} insertIndex={inputColumns.length} onAddInput={expr => onAddInputColumn(expr, inputColumns.length)} />}
           </>
         )}
       </div>
@@ -219,14 +233,18 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
 
       <div className="flex bg-primary/5">
         {outputColumns.length === 0 ? (
-          <EmptyColumnPlaceholder isInput={false} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, 0)} />
+          readOnly ? (
+            <div className="w-[140px] flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground/60">无输出</div>
+          ) : (
+            <EmptyColumnPlaceholder isInput={false} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, 0)} />
+          )
         ) : (
           <>
             {outputColumns.map((col, index) => <React.Fragment key={col.id}>
-                <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />
+                {!readOnly && <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />}
                 {renderColumnHeader(col, canDeleteOutput)}
               </React.Fragment>)}
-            <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />
+            {!readOnly && <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />}
           </>
         )}
       </div>
