@@ -54,6 +54,7 @@ export const CellInput: React.FC<CellInputProps> = ({
   onChange,
   onMouseDown,
   onMouseEnter,
+  readOnly = false,
 }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
