@@ -110,7 +110,8 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   onAddInputColumn,
   onAddOutputColumn,
   onEditColumn,
-  onDeleteColumn
+  onDeleteColumn,
+  readOnly = false,
 }) => {
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
   const [editName, setEditName] = useState('');
