@@ -495,12 +495,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       </div>
       
       {/* 添加规则按钮 */}
-      <div className="flex justify-center py-3 border-t border-border bg-muted/30">
-        <Button variant="outline" size="sm" className="gap-1" onClick={handleAddRule}>
-          <Plus className="h-4 w-4" />
-          添加条件行
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-center py-3 border-t border-border bg-muted/30">
+          <Button variant="outline" size="sm" className="gap-1" onClick={handleAddRule}>
+            <Plus className="h-4 w-4" />
+            添加条件行
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
