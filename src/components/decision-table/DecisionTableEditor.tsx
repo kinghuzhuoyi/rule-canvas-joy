@@ -15,9 +15,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
-import { Plus, Copy, ClipboardPaste, FileText } from 'lucide-react';
+import { Plus, Copy, ClipboardPaste, FileText, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Column, Rule, Variable, DataType, generateId } from './types';
+import { Column, Rule, InputExpr, DataType, generateId, expressionToString, inferExprDataType } from './types';
 import { TableHeader } from './TableHeader';
 import { RuleRow } from './RuleRow';
 import { useTableSelection } from './useTableSelection';
@@ -103,6 +103,22 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       setRules(initialData.rules);
     }
   }, [initialData?.rules]);
+
+  // 确保始终存在一个兜底行
+  useEffect(() => {
+    if (!rules.some(r => r.isFallback)) {
+      setRules(prev => [
+        ...prev,
+        {
+          id: generateId(),
+          isFallback: true,
+          cells: columns.reduce((acc, col) => ({ ...acc, [col.id]: '' }), {}),
+        },
+      ]);
+    }
+  }, [rules, columns]);
+  
+
   
   const {
     selectedCells,
@@ -218,13 +234,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   };
   
   // 添加输入列 - 支持 insertIndex
-  const handleAddInputColumn = useCallback((variable: Variable, insertIndex?: number) => {
+  const handleAddInputColumn = useCallback((expr: InputExpr, insertIndex?: number) => {
     const newColumn: Column = {
       id: generateId(),
-      name: variable.name,
-      dataType: variable.dataType,
+      name: expressionToString(expr),
+      dataType: inferExprDataType(expr),
       isInput: true,
-      variableId: variable.id,
+      inputExpr: expr,
+      variableId: expr.kind === 'variable' ? expr.variableId : undefined,
     };
     
     setColumns(prev => {
@@ -237,7 +254,6 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       return [...inputCols, ...outputCols];
     });
     
-    // 为所有规则添加新列的单元格
     setRules(prev => prev.map(rule => ({
       ...rule,
       cells: { ...rule.cells, [newColumn.id]: '' },
@@ -263,7 +279,6 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       return [...inputCols, ...outputCols];
     });
     
-    // 为所有规则添加新列的单元格
     setRules(prev => prev.map(rule => ({
       ...rule,
       cells: { ...rule.cells, [newColumn.id]: '' },
@@ -271,11 +286,19 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   }, []);
   
   // 编辑列
-  const handleEditColumn = useCallback((columnId: string, name: string, dataType: DataType) => {
+  const handleEditColumn = useCallback((columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => {
     setColumns(prev => prev.map(col =>
-      col.id === columnId ? { ...col, name, dataType } : col
+      col.id === columnId
+        ? {
+            ...col,
+            name,
+            dataType,
+            ...(inputExpr !== undefined ? { inputExpr, variableId: inputExpr.kind === 'variable' ? inputExpr.variableId : undefined } : {}),
+          }
+        : col
     ));
   }, []);
+
   
   // 删除列
   const handleDeleteColumn = useCallback((columnId: string) => {
@@ -424,25 +447,47 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={rules.map(r => r.id)} strategy={verticalListSortingStrategy}>
-            <div className="min-w-max">
-              {rules.map(rule => (
-                <RuleRow
-                  key={rule.id}
-                  rule={rule}
-                  columns={columns}
-                  onCellChange={handleCellChange}
-                  onDelete={handleDeleteRule}
-                  isCellSelected={isCellSelected}
-                  onCellMouseDown={handleCellMouseDown}
-                  onCellMouseEnter={handleCellMouseEnter}
-                  canDelete={rules.length > 1}
-                  isHighlighted={highlightedRuleId === rule.id}
-                />
-              ))}
-            </div>
-          </SortableContext>
+          {(() => {
+            const normalRules = rules.filter(r => !r.isFallback);
+            const fallbackRule = rules.find(r => r.isFallback);
+            return (
+              <SortableContext items={normalRules.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                <div className="min-w-max">
+                  {normalRules.map(rule => (
+                    <RuleRow
+                      key={rule.id}
+                      rule={rule}
+                      columns={columns}
+                      onCellChange={handleCellChange}
+                      onDelete={handleDeleteRule}
+                      isCellSelected={isCellSelected}
+                      onCellMouseDown={handleCellMouseDown}
+                      onCellMouseEnter={handleCellMouseEnter}
+                      canDelete={normalRules.length > 1}
+                      isHighlighted={highlightedRuleId === rule.id}
+                    />
+                  ))}
+                  {fallbackRule && (
+                    <RuleRow
+                      key={fallbackRule.id}
+                      rule={fallbackRule}
+                      columns={columns}
+                      onCellChange={handleCellChange}
+                      onDelete={handleDeleteRule}
+                      isCellSelected={isCellSelected}
+                      onCellMouseDown={handleCellMouseDown}
+                      onCellMouseEnter={handleCellMouseEnter}
+                      canDelete={false}
+                      isHighlighted={highlightedRuleId === fallbackRule.id}
+                      isFallback
+                    />
+                  )}
+                </div>
+              </SortableContext>
+            );
+          })()}
         </DndContext>
+
       </div>
       
       {/* 添加规则按钮 */}

@@ -116,40 +116,40 @@ export function findMatchingRule(
 ): MatchResult {
   const inputColumns = columns.filter(c => c.isInput);
   const outputColumns = columns.filter(c => !c.isInput);
-  
-  for (const rule of rules) {
+
+  const normalRules = rules.filter(r => !r.isFallback);
+  const fallbackRule = rules.find(r => r.isFallback);
+
+  for (const rule of normalRules) {
     let allMatch = true;
-    
     for (const col of inputColumns) {
       const inputValue = inputs[col.id] || '';
       const condition = rule.cells[col.id] || '';
-      
       if (!matchesCondition(inputValue, condition, col.dataType)) {
         allMatch = false;
         break;
       }
     }
-    
     if (allMatch) {
       const outputs: Record<string, string> = {};
       for (const col of outputColumns) {
         outputs[col.id] = rule.cells[col.id] || '';
       }
-      
-      return {
-        matched: true,
-        rule,
-        outputs,
-      };
+      return { matched: true, rule, outputs };
     }
   }
-  
-  return {
-    matched: false,
-    rule: null,
-    outputs: {},
-  };
+
+  if (fallbackRule) {
+    const outputs: Record<string, string> = {};
+    for (const col of outputColumns) {
+      outputs[col.id] = fallbackRule.cells[col.id] || '';
+    }
+    return { matched: true, rule: fallbackRule, outputs };
+  }
+
+  return { matched: false, rule: null, outputs: {} };
 }
+
 
 // 比较预期输出与实际输出
 export function compareOutputs(

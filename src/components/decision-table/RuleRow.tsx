@@ -2,7 +2,7 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical, X, Shield } from 'lucide-react';
 import { Column, Rule } from './types';
 import { CellInput } from './CellInput';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface RuleRowProps {
   onCellMouseEnter: (ruleId: string, columnId: string) => void;
   canDelete: boolean;
   isHighlighted?: boolean;
+  isFallback?: boolean;
 }
 
 export const RuleRow: React.FC<RuleRowProps> = ({
@@ -29,15 +30,10 @@ export const RuleRow: React.FC<RuleRowProps> = ({
   onCellMouseEnter,
   canDelete,
   isHighlighted = false,
+  isFallback = false,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: rule.id });
+  const sortable = useSortable({ id: rule.id, disabled: isFallback });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
   
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -54,34 +50,47 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       className={cn(
         "flex border-b border-border bg-card min-w-max transition-colors",
         isDragging && "opacity-50 shadow-lg z-10",
-        isHighlighted && "bg-primary/10 ring-2 ring-primary/50 ring-inset"
+        isHighlighted && "bg-primary/10 ring-2 ring-primary/50 ring-inset",
+        isFallback && "bg-amber-500/5 border-t-2 border-t-amber-500/40"
       )}
     >
-      {/* 拖拽手柄 - sticky left */}
+      {/* 拖拽手柄 / 兜底标识 - sticky left */}
       <div
-        className="w-8 flex-shrink-0 flex items-center justify-center bg-muted/50 border-r border-border cursor-grab active:cursor-grabbing sticky left-0 z-10"
-        {...attributes}
-        {...listeners}
+        className={cn(
+          "w-8 flex-shrink-0 flex items-center justify-center border-r border-border sticky left-0 z-10",
+          isFallback ? "bg-amber-500/10" : "bg-muted/50 cursor-grab active:cursor-grabbing"
+        )}
+        {...(isFallback ? {} : attributes)}
+        {...(isFallback ? {} : listeners)}
+        title={isFallback ? '兜底默认行（永远匹配）' : undefined}
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        {isFallback
+          ? <Shield className="h-4 w-4 text-amber-600" />
+          : <GripVertical className="h-4 w-4 text-muted-foreground" />}
       </div>
       
       {/* 输入列单元格 */}
-      <div className="flex bg-secondary/10">
+      <div className={cn("flex", isFallback ? "bg-muted/40" : "bg-secondary/10")}>
         {inputColumns.map(column => (
           <div
             key={column.id}
             className="w-[140px] flex-shrink-0 h-10 border-r border-border"
           >
-            <CellInput
-              value={rule.cells[column.id] || ''}
-              dataType={column.dataType}
-              isInput={true}
-              isSelected={isCellSelected(rule.id, column.id)}
-              onChange={value => onCellChange(rule.id, column.id, value)}
-              onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
-              onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
-            />
+            {isFallback ? (
+              <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+                任意
+              </div>
+            ) : (
+              <CellInput
+                value={rule.cells[column.id] || ''}
+                dataType={column.dataType}
+                isInput={true}
+                isSelected={isCellSelected(rule.id, column.id)}
+                onChange={value => onCellChange(rule.id, column.id, value)}
+                onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
+                onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -90,7 +99,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       <div className="w-1 bg-border flex-shrink-0" />
       
       {/* 输出列单元格 */}
-      <div className="flex bg-primary/5">
+      <div className={cn("flex", isFallback ? "bg-amber-500/5" : "bg-primary/5")}>
         {outputColumns.map(column => (
           <div
             key={column.id}
@@ -110,8 +119,11 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       </div>
       
       {/* 删除按钮 - sticky right */}
-      <div className="w-10 flex-shrink-0 flex items-center justify-center bg-muted/50 border-l border-border sticky right-0 z-10">
-        {canDelete && (
+      <div className={cn(
+        "w-10 flex-shrink-0 flex items-center justify-center border-l border-border sticky right-0 z-10",
+        isFallback ? "bg-amber-500/10" : "bg-muted/50"
+      )}>
+        {!isFallback && canDelete && (
           <Button
             variant="ghost"
             size="icon"
