@@ -467,6 +467,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
                       onCellMouseEnter={handleCellMouseEnter}
                       canDelete={normalRules.length > 1}
                       isHighlighted={highlightedRuleId === rule.id}
+                      readOnly={readOnly}
                     />
                   ))}
                   {fallbackRule && (
@@ -482,6 +483,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
                       canDelete={false}
                       isHighlighted={highlightedRuleId === fallbackRule.id}
                       isFallback
+                      readOnly={readOnly}
                     />
                   )}
                 </div>
