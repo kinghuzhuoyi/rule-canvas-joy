@@ -53,17 +53,11 @@ const getDefaultMeta = (index: number, type: ComponentType = 'decision_table'): 
   };
 };
 
-// 生成默认列
-const getDefaultColumns = (): Column[] => [
-  { id: generateId(), name: 'input_1', dataType: 'string', isInput: true, variableId: 'var_1' },
-  { id: generateId(), name: 'output_1', dataType: 'string', isInput: false },
-];
+// 生成默认列（初始为空，由用户点击 + 添加）
+const getDefaultColumns = (): Column[] => [];
 
-// 生成默认规则
-const getDefaultRules = (columns: Column[]): Rule[] => [{
-  id: generateId(),
-  cells: columns.reduce((acc, col) => ({ ...acc, [col.id]: '' }), {}),
-}];
+// 生成默认规则（初始为空，兜底行会自动生成）
+const getDefaultRules = (_columns: Column[]): Rule[] => [];
 
 // Provider Props
 interface DecisionTableProviderProps {
