@@ -240,9 +240,10 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   }, []);
   
   // 添加输出列 - 支持 insertIndex
-  const handleAddOutputColumn = useCallback((name: string, dataType: DataType, insertIndex?: number) => {
+  const handleAddOutputColumn = useCallback((code: string, name: string, dataType: DataType, insertIndex?: number) => {
     const newColumn: Column = {
       id: generateId(),
+      code,
       name,
       dataType,
       isInput: false,
@@ -265,11 +266,12 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   }, []);
   
   // 编辑列
-  const handleEditColumn = useCallback((columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => {
+  const handleEditColumn = useCallback((columnId: string, code: string, name: string, dataType: DataType, inputExpr?: InputExpr) => {
     setColumns(prev => prev.map(col =>
       col.id === columnId
         ? {
             ...col,
+            code,
             name,
             dataType,
             ...(inputExpr !== undefined ? { inputExpr, variableId: inputExpr.kind === 'variable' ? inputExpr.variableId : undefined } : {}),
