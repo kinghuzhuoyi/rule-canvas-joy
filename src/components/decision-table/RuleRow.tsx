@@ -60,10 +60,10 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       <div
         className={cn(
           "w-8 flex-shrink-0 flex items-center justify-center border-r border-border sticky left-0 z-10",
-          isFallback ? "bg-muted/50" : "bg-muted/50 cursor-grab active:cursor-grabbing"
+          isFallback || readOnly ? "bg-muted/50" : "bg-muted/50 cursor-grab active:cursor-grabbing"
         )}
-        {...(isFallback ? {} : attributes)}
-        {...(isFallback ? {} : listeners)}
+        {...(isFallback || readOnly ? {} : attributes)}
+        {...(isFallback || readOnly ? {} : listeners)}
         title={isFallback ? '兜底默认行（永远匹配）' : undefined}
       >
         {isFallback
@@ -91,6 +91,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
                 onChange={value => onCellChange(rule.id, column.id, value)}
                 onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
                 onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
+                readOnly={readOnly}
               />
             )}
           </div>
@@ -115,6 +116,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
               onChange={value => onCellChange(rule.id, column.id, value)}
               onMouseDown={e => onCellMouseDown(rule.id, column.id, e)}
               onMouseEnter={() => onCellMouseEnter(rule.id, column.id)}
+              readOnly={readOnly}
             />
           </div>
         ))}
@@ -122,7 +124,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       
       {/* 删除按钮 - sticky right */}
       <div className="w-10 flex-shrink-0 flex items-center justify-center bg-muted/50 border-l border-border sticky right-0 z-10">
-        {!isFallback && canDelete && (
+        {!isFallback && !readOnly && canDelete && (
           <Button
             variant="ghost"
             size="icon"
