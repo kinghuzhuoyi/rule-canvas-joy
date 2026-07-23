@@ -82,13 +82,55 @@ export interface Variable {
   dataType: DataType;
 }
 
+// 输入表达式（函数 / 变量 / 常量）
+export type FunctionName = 'max' | 'min' | 'tostring';
+
+export interface FunctionDef {
+  name: FunctionName;
+  label: string;
+  argCount: number;
+  returnType: DataType;
+}
+
+export const FUNCTIONS: FunctionDef[] = [
+  { name: 'max', label: 'max（最大值）', argCount: 2, returnType: 'decimal' },
+  { name: 'min', label: 'min（最小值）', argCount: 2, returnType: 'decimal' },
+  { name: 'tostring', label: 'tostring（转字符串）', argCount: 1, returnType: 'string' },
+];
+
+export type InputExpr =
+  | { kind: 'variable'; variableId: string; code: string; label?: string; dataType: DataType }
+  | { kind: 'constant'; value: string; dataType: DataType }
+  | { kind: 'function'; name: FunctionName; args: (InputExpr | null)[] };
+
+export function expressionToString(expr?: InputExpr | null): string {
+  if (!expr) return '';
+  if (expr.kind === 'variable') return expr.code;
+  if (expr.kind === 'constant') {
+    if (expr.dataType === 'string') return `"${expr.value}"`;
+    return expr.value || '""';
+  }
+  if (expr.kind === 'function') {
+    return `${expr.name}(${expr.args.map(a => expressionToString(a) || '?').join(', ')})`;
+  }
+  return '';
+}
+
+export function inferExprDataType(expr?: InputExpr | null): DataType {
+  if (!expr) return 'string';
+  if (expr.kind === 'variable' || expr.kind === 'constant') return expr.dataType;
+  const def = FUNCTIONS.find(f => f.name === expr.name);
+  return def?.returnType || 'string';
+}
+
 // 列定义
 export interface Column {
   id: string;
   name: string;
   dataType: DataType;
   isInput: boolean; // true = 输入列, false = 输出列
-  variableId?: string; // 仅输入列有
+  variableId?: string; // 仅输入列有（兼容旧数据）
+  inputExpr?: InputExpr; // 仅输入列有，支持函数/变量/常量表达式
 }
 
 // 单元格值
@@ -101,6 +143,7 @@ export interface CellValue {
 export interface Rule {
   id: string;
   cells: Record<string, string>; // columnId -> value
+  isFallback?: boolean; // 兜底行：无输入条件，永远匹配，只有输出结果
 }
 
 // 决策表数据结构
