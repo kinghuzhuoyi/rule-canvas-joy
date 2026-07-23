@@ -213,14 +213,18 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
 
       <div className="flex bg-secondary/30">
         {inputColumns.length === 0 ? (
-          <EmptyColumnPlaceholder isInput onAddInput={expr => onAddInputColumn(expr, 0)} />
+          readOnly ? (
+            <div className="w-[140px] flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground/60">无输入</div>
+          ) : (
+            <EmptyColumnPlaceholder isInput onAddInput={expr => onAddInputColumn(expr, 0)} />
+          )
         ) : (
           <>
             {inputColumns.map((col, index) => <React.Fragment key={col.id}>
-                <ColumnDivider isInput={true} insertIndex={index} onAddInput={expr => onAddInputColumn(expr, index)} />
+                {!readOnly && <ColumnDivider isInput={true} insertIndex={index} onAddInput={expr => onAddInputColumn(expr, index)} />}
                 {renderColumnHeader(col, canDeleteInput)}
               </React.Fragment>)}
-            <ColumnDivider isInput={true} insertIndex={inputColumns.length} onAddInput={expr => onAddInputColumn(expr, inputColumns.length)} />
+            {!readOnly && <ColumnDivider isInput={true} insertIndex={inputColumns.length} onAddInput={expr => onAddInputColumn(expr, inputColumns.length)} />}
           </>
         )}
       </div>
@@ -229,14 +233,18 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
 
       <div className="flex bg-primary/5">
         {outputColumns.length === 0 ? (
-          <EmptyColumnPlaceholder isInput={false} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, 0)} />
+          readOnly ? (
+            <div className="w-[140px] flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground/60">无输出</div>
+          ) : (
+            <EmptyColumnPlaceholder isInput={false} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, 0)} />
+          )
         ) : (
           <>
             {outputColumns.map((col, index) => <React.Fragment key={col.id}>
-                <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />
+                {!readOnly && <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />}
                 {renderColumnHeader(col, canDeleteOutput)}
               </React.Fragment>)}
-            <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />
+            {!readOnly && <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />}
           </>
         )}
       </div>
