@@ -103,6 +103,22 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       setRules(initialData.rules);
     }
   }, [initialData?.rules]);
+
+  // 确保始终存在一个兜底行
+  useEffect(() => {
+    if (!rules.some(r => r.isFallback)) {
+      setRules(prev => [
+        ...prev,
+        {
+          id: generateId(),
+          isFallback: true,
+          cells: columns.reduce((acc, col) => ({ ...acc, [col.id]: '' }), {}),
+        },
+      ]);
+    }
+  }, [rules, columns]);
+  
+
   
   const {
     selectedCells,
