@@ -13,6 +13,7 @@ interface TableHeaderProps {
   onAddOutputColumn: (name: string, dataType: DataType, insertIndex?: number) => void;
   onEditColumn: (columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => void;
   onDeleteColumn: (columnId: string) => void;
+  readOnly?: boolean;
 }
 
 
