@@ -158,19 +158,23 @@ export const CellInput: React.FC<CellInputProps> = ({
         onMouseDown={onMouseDown}
         onMouseEnter={onMouseEnter}
       >
-        <Select value={localValue} onValueChange={v => { setLocalValue(v); onChange(v); }}>
-          <SelectTrigger className="h-full border-0 rounded-none focus:ring-0 bg-transparent">
-            <SelectValue placeholder="选择..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="true">
-              <span className="text-green-600 font-medium">true</span>
-            </SelectItem>
-            <SelectItem value="false">
-              <span className="text-red-500 font-medium">false</span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        {readOnly ? (
+          <div className="h-full w-full flex items-center px-3 text-sm">
+            {localValue === 'true' ? <span className="text-green-600 font-medium">true</span>
+              : localValue === 'false' ? <span className="text-red-500 font-medium">false</span>
+              : <span className="text-muted-foreground/50">—</span>}
+          </div>
+        ) : (
+          <Select value={localValue} onValueChange={v => { setLocalValue(v); onChange(v); }}>
+            <SelectTrigger className="h-full border-0 rounded-none focus:ring-0 bg-transparent">
+              <SelectValue placeholder="选择..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true"><span className="text-green-600 font-medium">true</span></SelectItem>
+              <SelectItem value="false"><span className="text-red-500 font-medium">false</span></SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
     );
   }
