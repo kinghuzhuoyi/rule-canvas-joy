@@ -140,7 +140,8 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           <span className={cn("font-mono text-xs", typeIcon.color)}>{typeIcon.icon}</span>
           <span className="font-medium text-sm truncate" title={displayName}>{displayName}</span>
 
-          <Popover open={editingColumn?.id === column.id} onOpenChange={open => {
+          <Popover open={!readOnly && editingColumn?.id === column.id} onOpenChange={open => {
+          if (readOnly) return;
           if (open) {
             startEditing(column);
           } else {
@@ -148,7 +149,14 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           }
         }}>
             <PopoverTrigger asChild>
-              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-accent rounded flex-shrink-0">
+              <button
+                disabled={readOnly}
+                className={cn(
+                  "opacity-0 transition-opacity p-0.5 hover:bg-accent rounded flex-shrink-0",
+                  !readOnly && "group-hover:opacity-100",
+                  readOnly && "hidden"
+                )}
+              >
                 <Pencil className="h-3 w-3 text-muted-foreground" />
               </button>
             </PopoverTrigger>
