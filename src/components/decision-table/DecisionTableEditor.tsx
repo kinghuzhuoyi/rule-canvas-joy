@@ -385,14 +385,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
           <div className="w-8 flex-shrink-0 sticky left-0 z-10 bg-card" />
           <div
             className="h-full flex items-center justify-center px-3 bg-secondary/30 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
-            style={{ width: `${inputColumnCount * 140}px` }}
+            style={{ width: `${Math.max(inputColumnCount, 1) * 140}px` }}
           >
             输入条件
           </div>
           <div className="w-1 bg-border flex-shrink-0" />
           <div
             className="h-full flex items-center justify-center px-3 bg-primary/5 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
-            style={{ width: `${outputColumnCount * 140}px` }}
+            style={{ width: `${Math.max(outputColumnCount, 1) * 140}px` }}
           >
             输出结果
           </div>
