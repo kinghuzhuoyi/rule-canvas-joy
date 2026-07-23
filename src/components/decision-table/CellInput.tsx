@@ -62,12 +62,6 @@ export const CellInput: React.FC<CellInputProps> = ({
   const [isValid, setIsValid] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  useEffect(() => {
-    setLocalValue(value);
-    // 同步外部值时清除错误状态
-    setError(null);
-  }, [value]);
-
   // 实时验证函数
   const validate = useCallback((val: string): { valid: boolean; message?: string } => {
     if (!val.trim()) {
@@ -86,6 +80,24 @@ export const CellInput: React.FC<CellInputProps> = ({
       return validateOutputValue(val, dataType);
     }
   }, [dataType, isInput]);
+
+  useEffect(() => {
+    setLocalValue(value);
+    if (value && value.trim()) {
+      const result = validate(value);
+      if (!result.valid) {
+        setError(result.message || '格式错误');
+        setIsValid(false);
+      } else {
+        setError(null);
+        setIsValid(true);
+      }
+    } else {
+      setError(null);
+      setIsValid(false);
+    }
+  }, [value, validate]);
+
 
   // 输入变化时实时验证
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
