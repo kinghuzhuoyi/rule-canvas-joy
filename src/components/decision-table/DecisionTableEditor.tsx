@@ -43,8 +43,11 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   initialData,
   onChange,
   highlightedRuleId,
+  defaultMode = 'view',
 }) => {
   const { toast } = useToast();
+  const [mode, setMode] = useState<'view' | 'edit'>(defaultMode);
+  const readOnly = mode === 'view';
   const [columns, setColumns] = useState<Column[]>(() => initialData?.columns || getDefaultData().columns);
   const [rules, setRules] = useState<Rule[]>(() => initialData?.rules || getDefaultData().rules);
   
