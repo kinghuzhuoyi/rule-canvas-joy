@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
-import { Plus, Copy, ClipboardPaste, FileText, Shield } from 'lucide-react';
+import { Plus, Copy, ClipboardPaste, FileText, Shield, Pencil, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Column, Rule, InputExpr, DataType, generateId, expressionToString, inferExprDataType } from './types';
 import { TableHeader } from './TableHeader';
