@@ -159,6 +159,10 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
 
     const handlePaste = (e: ClipboardEvent) => {
       if (selectedCells.size === 0) return;
+      const text = e.clipboardData?.getData('text/plain');
+      if (!text) return;
+
+      const isMultiCellContent = /\t|\r?\n/.test(text.replace(/\r?\n$/, ''));
       const target = e.target as HTMLElement | null;
       const inEditable = !!target && (
         target.tagName === 'INPUT' ||
@@ -166,9 +170,10 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
         target.isContentEditable
       );
       const multi = selectedCells.size > 1;
-      if (inEditable && !multi) return;
-      const text = e.clipboardData?.getData('text/plain');
-      if (!text) return;
+
+      // 单选 + 单格内容 + 焦点在输入框：交给原生粘贴
+      if (inEditable && !multi && !isMultiCellContent) return;
+
       e.preventDefault();
       pasteText(text);
       toast({ description: '已粘贴数据' });
