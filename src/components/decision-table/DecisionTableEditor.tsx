@@ -31,43 +31,11 @@ interface DecisionTableEditorProps {
   highlightedRuleId?: string | null;
 }
 
-// 默认初始数据
-const getDefaultData = (): { columns: Column[]; rules: Rule[] } => {
-  const inputCol: Column = {
-    id: generateId(),
-    name: 'product_id',
-    dataType: 'string',
-    isInput: true,
-    variableId: 'var_1',
-  };
-  
-  const inputCol2: Column = {
-    id: generateId(),
-    name: 'score',
-    dataType: 'integer',
-    isInput: true,
-    variableId: 'var_2',
-  };
-  
-  const outputCol: Column = {
-    id: generateId(),
-    name: 'rate',
-    dataType: 'decimal',
-    isInput: false,
-  };
-  
-  const columns = [inputCol, inputCol2, outputCol];
-  
-  const rules: Rule[] = [
-    { id: generateId(), cells: { [inputCol.id]: 'sZ0101', [inputCol2.id]: '(596,+inf)', [outputCol.id]: '0.0150' } },
-    { id: generateId(), cells: { [inputCol.id]: 'sZ0101', [inputCol2.id]: '(566,596]', [outputCol.id]: '0.0388' } },
-    { id: generateId(), cells: { [inputCol.id]: 'sZ0101', [inputCol2.id]: '(541,566]', [outputCol.id]: '0.0444' } },
-    { id: generateId(), cells: { [inputCol.id]: 'sZ0101', [inputCol2.id]: '(516,541]', [outputCol.id]: '0.0501' } },
-    { id: generateId(), cells: { [inputCol.id]: 'sZ0101', [inputCol2.id]: '(0,516]', [outputCol.id]: '0.0542' } },
-  ];
-  
-  return { columns, rules };
-};
+// 默认初始数据（空表：由用户点击 + 添加列和行）
+const getDefaultData = (): { columns: Column[]; rules: Rule[] } => ({
+  columns: [],
+  rules: [],
+});
 
 export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   className,
@@ -417,14 +385,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
           <div className="w-8 flex-shrink-0 sticky left-0 z-10 bg-card" />
           <div
             className="h-full flex items-center justify-center px-3 bg-secondary/30 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
-            style={{ width: `${inputColumnCount * 140}px` }}
+            style={{ width: `${Math.max(inputColumnCount, 1) * 140}px` }}
           >
             输入条件
           </div>
           <div className="w-1 bg-border flex-shrink-0" />
           <div
             className="h-full flex items-center justify-center px-3 bg-primary/5 text-center text-xs font-medium text-muted-foreground flex-shrink-0"
-            style={{ width: `${outputColumnCount * 140}px` }}
+            style={{ width: `${Math.max(outputColumnCount, 1) * 140}px` }}
           >
             输出结果
           </div>

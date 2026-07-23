@@ -202,23 +202,94 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       <div className="w-8 flex-shrink-0 bg-muted/50 border-r border-border sticky left-0 z-10" />
 
       <div className="flex bg-secondary/30">
-        {inputColumns.map((col, index) => <React.Fragment key={col.id}>
-            <ColumnDivider isInput={true} insertIndex={index} onAddInput={expr => onAddInputColumn(expr, index)} />
-            {renderColumnHeader(col, canDeleteInput)}
-          </React.Fragment>)}
-        <ColumnDivider isInput={true} insertIndex={inputColumns.length} onAddInput={expr => onAddInputColumn(expr, inputColumns.length)} />
+        {inputColumns.length === 0 ? (
+          <EmptyColumnPlaceholder isInput onAddInput={expr => onAddInputColumn(expr, 0)} />
+        ) : (
+          <>
+            {inputColumns.map((col, index) => <React.Fragment key={col.id}>
+                <ColumnDivider isInput={true} insertIndex={index} onAddInput={expr => onAddInputColumn(expr, index)} />
+                {renderColumnHeader(col, canDeleteInput)}
+              </React.Fragment>)}
+            <ColumnDivider isInput={true} insertIndex={inputColumns.length} onAddInput={expr => onAddInputColumn(expr, inputColumns.length)} />
+          </>
+        )}
       </div>
 
       <div className="w-1 bg-border flex-shrink-0" />
 
       <div className="flex bg-primary/5">
-        {outputColumns.map((col, index) => <React.Fragment key={col.id}>
-            <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />
-            {renderColumnHeader(col, canDeleteOutput)}
-          </React.Fragment>)}
-        <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />
+        {outputColumns.length === 0 ? (
+          <EmptyColumnPlaceholder isInput={false} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, 0)} />
+        ) : (
+          <>
+            {outputColumns.map((col, index) => <React.Fragment key={col.id}>
+                <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />
+                {renderColumnHeader(col, canDeleteOutput)}
+              </React.Fragment>)}
+            <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />
+          </>
+        )}
       </div>
 
       <div className="w-10 flex-shrink-0 bg-muted/50 border-l border-border sticky right-0 z-10" />
     </div>;
+};
+
+// 空状态占位单元格 - 引导用户添加第一列
+interface EmptyColumnPlaceholderProps {
+  isInput: boolean;
+  onAddInput?: (expr: InputExpr) => void;
+  onAddOutput?: (name: string, dataType: DataType) => void;
+}
+const EmptyColumnPlaceholder: React.FC<EmptyColumnPlaceholderProps> = ({ isInput, onAddInput, onAddOutput }) => {
+  const [open, setOpen] = useState(false);
+  const [newOutputName, setNewOutputName] = useState('');
+  const [newOutputType, setNewOutputType] = useState<DataType>('string');
+  const handleAddOutput = () => {
+    if (newOutputName.trim() && onAddOutput) {
+      onAddOutput(newOutputName.trim(), newOutputType);
+      setNewOutputName('');
+      setNewOutputType('string');
+      setOpen(false);
+    }
+  };
+  return (
+    <div className="w-[140px] flex-shrink-0 flex items-center justify-center p-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="w-full h-9 flex items-center justify-center gap-1 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors">
+            <Plus className="h-3.5 w-3.5" />
+            <span>添加{isInput ? '输入' : '输出'}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-auto" align="start">
+          {isInput ? (
+            <ExpressionBuilder
+              onChange={expr => { if (expr) onAddInput?.(expr); }}
+              onConfirm={() => setOpen(false)}
+              onCancel={() => setOpen(false)}
+            />
+          ) : (
+            <div className="flex flex-col gap-2 p-3 min-w-[200px]">
+              <Input placeholder="列名称" value={newOutputName} onChange={e => setNewOutputName(e.target.value)} className="h-8 text-sm" autoFocus />
+              <Select value={newOutputType} onValueChange={v => setNewOutputType(v as DataType)}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="数据类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button size="sm" className="flex-1 h-7" onClick={handleAddOutput}>添加</Button>
+                <Button size="sm" variant="ghost" className="h-7" onClick={() => setOpen(false)}>取消</Button>
+              </div>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 };
