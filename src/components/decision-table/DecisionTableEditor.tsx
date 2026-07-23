@@ -431,25 +431,47 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={rules.map(r => r.id)} strategy={verticalListSortingStrategy}>
-            <div className="min-w-max">
-              {rules.map(rule => (
-                <RuleRow
-                  key={rule.id}
-                  rule={rule}
-                  columns={columns}
-                  onCellChange={handleCellChange}
-                  onDelete={handleDeleteRule}
-                  isCellSelected={isCellSelected}
-                  onCellMouseDown={handleCellMouseDown}
-                  onCellMouseEnter={handleCellMouseEnter}
-                  canDelete={rules.length > 1}
-                  isHighlighted={highlightedRuleId === rule.id}
-                />
-              ))}
-            </div>
-          </SortableContext>
+          {(() => {
+            const normalRules = rules.filter(r => !r.isFallback);
+            const fallbackRule = rules.find(r => r.isFallback);
+            return (
+              <SortableContext items={normalRules.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                <div className="min-w-max">
+                  {normalRules.map(rule => (
+                    <RuleRow
+                      key={rule.id}
+                      rule={rule}
+                      columns={columns}
+                      onCellChange={handleCellChange}
+                      onDelete={handleDeleteRule}
+                      isCellSelected={isCellSelected}
+                      onCellMouseDown={handleCellMouseDown}
+                      onCellMouseEnter={handleCellMouseEnter}
+                      canDelete={normalRules.length > 1}
+                      isHighlighted={highlightedRuleId === rule.id}
+                    />
+                  ))}
+                  {fallbackRule && (
+                    <RuleRow
+                      key={fallbackRule.id}
+                      rule={fallbackRule}
+                      columns={columns}
+                      onCellChange={handleCellChange}
+                      onDelete={handleDeleteRule}
+                      isCellSelected={isCellSelected}
+                      onCellMouseDown={handleCellMouseDown}
+                      onCellMouseEnter={handleCellMouseEnter}
+                      canDelete={false}
+                      isHighlighted={highlightedRuleId === fallbackRule.id}
+                      isFallback
+                    />
+                  )}
+                </div>
+              </SortableContext>
+            );
+          })()}
         </DndContext>
+
       </div>
       
       {/* 添加规则按钮 */}
