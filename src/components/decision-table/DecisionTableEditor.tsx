@@ -131,6 +131,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (readOnly) return;
       if (selectedCells.size === 0) return;
 
       const target = e.target as HTMLElement | null;
