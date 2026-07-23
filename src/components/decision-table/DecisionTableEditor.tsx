@@ -365,26 +365,48 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     <div className={cn("flex flex-col bg-card rounded-lg border border-border shadow-sm overflow-hidden", className)}>
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border">
-        <h3 className="font-semibold text-foreground">决策表编辑器</h3>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleCopyClick}>
-            <Copy className="h-4 w-4" />
-            <span className="hidden sm:inline">复制</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handlePasteClick}>
-            <ClipboardPaste className="h-4 w-4" />
-            <span className="hidden sm:inline">粘贴</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleExportMarkdown}>
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">导出 Markdown</span>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleImportFromClipboard}>
-            <ClipboardPaste className="h-4 w-4" />
-            <span className="hidden sm:inline">从 Excel 导入</span>
-          </Button>
+          <h3 className="font-semibold text-foreground">决策表{readOnly ? '查看' : '编辑'}器</h3>
+          <span className={cn(
+            "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border",
+            readOnly ? "border-border text-muted-foreground bg-muted" : "border-primary/30 text-primary bg-primary/10"
+          )}>
+            {readOnly ? <><Eye className="h-3 w-3" /> 查看模式</> : <><Pencil className="h-3 w-3" /> 编辑模式</>}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {readOnly ? (
+            <Button variant="default" size="sm" className="gap-1" onClick={() => setMode('edit')}>
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline">编辑</span>
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleCopyClick}>
+                <Copy className="h-4 w-4" />
+                <span className="hidden sm:inline">复制</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handlePasteClick}>
+                <ClipboardPaste className="h-4 w-4" />
+                <span className="hidden sm:inline">粘贴</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleExportMarkdown}>
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">导出 Markdown</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleImportFromClipboard}>
+                <ClipboardPaste className="h-4 w-4" />
+                <span className="hidden sm:inline">从 Excel 导入</span>
+              </Button>
+              <Button variant="secondary" size="sm" className="gap-1" onClick={() => setMode('view')}>
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">完成</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
+      
       
       {/* 表格区域 */}
       <div className="flex-1 overflow-auto" onClick={e => {
