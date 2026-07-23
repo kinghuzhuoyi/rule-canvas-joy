@@ -440,6 +440,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
           onAddOutputColumn={handleAddOutputColumn}
           onEditColumn={handleEditColumn}
           onDeleteColumn={handleDeleteColumn}
+          readOnly={readOnly}
         />
         
         {/* 规则行 */}
