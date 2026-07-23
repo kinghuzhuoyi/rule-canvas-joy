@@ -10,19 +10,64 @@ import { cn } from '@/lib/utils';
 interface TableHeaderProps {
   columns: Column[];
   onAddInputColumn: (expr: InputExpr, insertIndex?: number) => void;
-  onAddOutputColumn: (name: string, dataType: DataType, insertIndex?: number) => void;
-  onEditColumn: (columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => void;
+  onAddOutputColumn: (code: string, name: string, dataType: DataType, insertIndex?: number) => void;
+  onEditColumn: (columnId: string, code: string, name: string, dataType: DataType, inputExpr?: InputExpr) => void;
   onDeleteColumn: (columnId: string) => void;
   readOnly?: boolean;
 }
 
+
+// 输出列定义表单（编码 / 名称 / 类型）
+interface OutputColumnFormProps {
+  initialCode?: string;
+  initialName?: string;
+  initialType?: DataType;
+  submitLabel?: string;
+  onSubmit: (code: string, name: string, dataType: DataType) => void;
+  onCancel: () => void;
+}
+const OutputColumnForm: React.FC<OutputColumnFormProps> = ({
+  initialCode = '',
+  initialName = '',
+  initialType = 'string',
+  submitLabel = '添加',
+  onSubmit,
+  onCancel,
+}) => {
+  const [code, setCode] = useState(initialCode);
+  const [name, setName] = useState(initialName);
+  const [dataType, setDataType] = useState<DataType>(initialType);
+  const canSubmit = code.trim() && name.trim();
+  return (
+    <div className="flex flex-col gap-2 min-w-[240px]">
+      <Input placeholder="编码，如 age_level" value={code} onChange={e => setCode(e.target.value)} className="h-8 text-sm font-mono" autoFocus />
+      <Input placeholder="名称，如 年龄分层" value={name} onChange={e => setName(e.target.value)} className="h-8 text-sm" />
+      <Select value={dataType} onValueChange={v => setDataType(v as DataType)}>
+        <SelectTrigger className="h-8 text-sm">
+          <SelectValue placeholder="字段类型" />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
+            <SelectItem key={key} value={key}>{label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="flex gap-2">
+        <Button size="sm" className="flex-1 h-7" disabled={!canSubmit} onClick={() => canSubmit && onSubmit(code.trim(), name.trim(), dataType)}>
+          {submitLabel}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7" onClick={onCancel}>取消</Button>
+      </div>
+    </div>
+  );
+};
 
 // 列间分隔线组件 - 悬浮显示添加按钮
 interface ColumnDividerProps {
   isInput: boolean;
   insertIndex: number;
   onAddInput?: (expr: InputExpr) => void;
-  onAddOutput?: (name: string, dataType: DataType) => void;
+  onAddOutput?: (code: string, name: string, dataType: DataType) => void;
 }
 const ColumnDivider: React.FC<ColumnDividerProps> = ({
   isInput,
@@ -32,17 +77,6 @@ const ColumnDivider: React.FC<ColumnDividerProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
-  const [newOutputName, setNewOutputName] = useState('');
-  const [newOutputType, setNewOutputType] = useState<DataType>('string');
-  const handleAddOutput = () => {
-    if (newOutputName.trim() && onAddOutput) {
-      onAddOutput(newOutputName.trim(), newOutputType);
-      setNewOutputName('');
-      setNewOutputType('string');
-      setShowSelector(false);
-      setIsHovered(false);
-    }
-  };
   return <div className="relative w-0 flex-shrink-0 group/divider" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => !showSelector && setIsHovered(false)}>
       <div className={cn("absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-primary transition-opacity duration-200", isHovered ? "opacity-100" : "opacity-0")} />
 
@@ -74,31 +108,15 @@ const ColumnDivider: React.FC<ColumnDividerProps> = ({
                 <Plus className="h-3 w-3" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-3 min-w-[200px]" align="start">
-              <div className="flex flex-col gap-2">
-                <Input placeholder="列名称" value={newOutputName} onChange={e => setNewOutputName(e.target.value)} className="h-8 text-sm" autoFocus />
-                <Select value={newOutputType} onValueChange={v => setNewOutputType(v as DataType)}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="数据类型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 h-7" onClick={handleAddOutput}>
-                    添加
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7" onClick={() => {
-                setShowSelector(false);
-                setIsHovered(false);
-              }}>
-                    取消
-                  </Button>
-                </div>
-              </div>
+            <PopoverContent className="p-3 w-auto" align="start">
+              <OutputColumnForm
+                onSubmit={(code, name, dataType) => {
+                  onAddOutput?.(code, name, dataType);
+                  setShowSelector(false);
+                  setIsHovered(false);
+                }}
+                onCancel={() => { setShowSelector(false); setIsHovered(false); }}
+              />
             </PopoverContent>
           </Popover>}
       </div>
@@ -114,27 +132,15 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   readOnly = false,
 }) => {
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editType, setEditType] = useState<DataType>('string');
   const inputColumns = columns.filter(c => c.isInput);
   const outputColumns = columns.filter(c => !c.isInput);
   const canDeleteInput = inputColumns.length > 1;
   const canDeleteOutput = outputColumns.length > 1;
-  const startEditing = (column: Column) => {
-    setEditingColumn(column);
-    setEditName(column.name);
-    setEditType(column.dataType);
-  };
-  const saveEdit = () => {
-    if (editingColumn && editName.trim()) {
-      onEditColumn(editingColumn.id, editName.trim(), editType);
-    }
-    setEditingColumn(null);
-  };
   const renderColumnHeader = (column: Column, canDelete: boolean) => {
     const dataType = column.isInput && column.inputExpr ? inferExprDataType(column.inputExpr) : column.dataType;
     const typeIcon = DATA_TYPE_ICONS[dataType] || { icon: '?', color: 'text-muted-foreground' };
     const displayName = column.isInput && column.inputExpr ? expressionToString(column.inputExpr) : column.name;
+    const subLabel = !column.isInput && column.code ? column.code : undefined;
     return <div key={column.id} className={cn("group relative flex flex-col items-center justify-center p-2 w-[140px] flex-shrink-0", "border-r border-border last:border-r-0")}>
         <div className="flex items-center gap-1 max-w-full">
           <span className={cn("font-mono text-xs", typeIcon.color)}>{typeIcon.icon}</span>
@@ -143,7 +149,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           <Popover open={!readOnly && editingColumn?.id === column.id} onOpenChange={open => {
           if (readOnly) return;
           if (open) {
-            startEditing(column);
+            setEditingColumn(column);
           } else {
             setEditingColumn(null);
           }
@@ -160,39 +166,29 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
                 <Pencil className="h-3 w-3 text-muted-foreground" />
               </button>
             </PopoverTrigger>
-            <PopoverContent className="p-3 min-w-[240px]" align="start">
+            <PopoverContent className="p-3 w-auto" align="start">
               <div className="flex flex-col gap-2">
                 {column.isInput ? (
                   <ExpressionBuilder
                     value={column.inputExpr}
                     onChange={(expr) => {
-                      if (expr) onEditColumn(column.id, expressionToString(expr), inferExprDataType(expr), expr);
+                      if (expr) onEditColumn(column.id, column.code || '', expressionToString(expr), inferExprDataType(expr), expr);
                     }}
                     onConfirm={() => setEditingColumn(null)}
                     onCancel={() => setEditingColumn(null)}
                   />
                 ) : (
-                  <>
-                    <Input placeholder="列名称" value={editName} onChange={e => setEditName(e.target.value)} className="h-8 text-sm" autoFocus />
-                    <Select value={editType} onValueChange={v => setEditType(v as DataType)}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1 h-7" onClick={saveEdit}>
-                        保存
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingColumn(null)}>
-                        取消
-                      </Button>
-                    </div>
-                  </>
+                  <OutputColumnForm
+                    initialCode={column.code || ''}
+                    initialName={column.name}
+                    initialType={column.dataType}
+                    submitLabel="保存"
+                    onSubmit={(code, name, dataType) => {
+                      onEditColumn(column.id, code, name, dataType);
+                      setEditingColumn(null);
+                    }}
+                    onCancel={() => setEditingColumn(null)}
+                  />
                 )}
                 {canDelete && <Button size="sm" variant="destructive" className="h-7 w-full" onClick={() => {
                 onDeleteColumn(column.id);
@@ -205,7 +201,11 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
             </PopoverContent>
           </Popover>
         </div>
-        
+        {subLabel && (
+          <span className="text-[10px] font-mono text-muted-foreground truncate max-w-full mt-0.5" title={subLabel}>
+            {subLabel}
+          </span>
+        )}
       </div>;
   };
   return <div className="flex sticky top-8 z-20 bg-card border-b border-border min-w-max">
@@ -236,15 +236,15 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           readOnly ? (
             <div className="w-[140px] flex-shrink-0 flex items-center justify-center text-xs text-muted-foreground/60">无输出</div>
           ) : (
-            <EmptyColumnPlaceholder isInput={false} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, 0)} />
+            <EmptyColumnPlaceholder isInput={false} onAddOutput={(code, name, dataType) => onAddOutputColumn(code, name, dataType, 0)} />
           )
         ) : (
           <>
             {outputColumns.map((col, index) => <React.Fragment key={col.id}>
-                {!readOnly && <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, index)} />}
+                {!readOnly && <ColumnDivider isInput={false} insertIndex={index} onAddOutput={(code, name, dataType) => onAddOutputColumn(code, name, dataType, index)} />}
                 {renderColumnHeader(col, canDeleteOutput)}
               </React.Fragment>)}
-            {!readOnly && <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(name, dataType) => onAddOutputColumn(name, dataType, outputColumns.length)} />}
+            {!readOnly && <ColumnDivider isInput={false} insertIndex={outputColumns.length} onAddOutput={(code, name, dataType) => onAddOutputColumn(code, name, dataType, outputColumns.length)} />}
           </>
         )}
       </div>
@@ -257,20 +257,10 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
 interface EmptyColumnPlaceholderProps {
   isInput: boolean;
   onAddInput?: (expr: InputExpr) => void;
-  onAddOutput?: (name: string, dataType: DataType) => void;
+  onAddOutput?: (code: string, name: string, dataType: DataType) => void;
 }
 const EmptyColumnPlaceholder: React.FC<EmptyColumnPlaceholderProps> = ({ isInput, onAddInput, onAddOutput }) => {
   const [open, setOpen] = useState(false);
-  const [newOutputName, setNewOutputName] = useState('');
-  const [newOutputType, setNewOutputType] = useState<DataType>('string');
-  const handleAddOutput = () => {
-    if (newOutputName.trim() && onAddOutput) {
-      onAddOutput(newOutputName.trim(), newOutputType);
-      setNewOutputName('');
-      setNewOutputType('string');
-      setOpen(false);
-    }
-  };
   return (
     <div className="w-[140px] flex-shrink-0 flex items-center justify-center p-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -288,22 +278,14 @@ const EmptyColumnPlaceholder: React.FC<EmptyColumnPlaceholderProps> = ({ isInput
               onCancel={() => setOpen(false)}
             />
           ) : (
-            <div className="flex flex-col gap-2 p-3 min-w-[200px]">
-              <Input placeholder="列名称" value={newOutputName} onChange={e => setNewOutputName(e.target.value)} className="h-8 text-sm" autoFocus />
-              <Select value={newOutputType} onValueChange={v => setNewOutputType(v as DataType)}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="数据类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1 h-7" onClick={handleAddOutput}>添加</Button>
-                <Button size="sm" variant="ghost" className="h-7" onClick={() => setOpen(false)}>取消</Button>
-              </div>
+            <div className="p-3">
+              <OutputColumnForm
+                onSubmit={(code, name, dataType) => {
+                  onAddOutput?.(code, name, dataType);
+                  setOpen(false);
+                }}
+                onCancel={() => setOpen(false)}
+              />
             </div>
           )}
         </PopoverContent>
