@@ -18,6 +18,7 @@ interface RuleRowProps {
   canDelete: boolean;
   isHighlighted?: boolean;
   isFallback?: boolean;
+  readOnly?: boolean;
 }
 
 export const RuleRow: React.FC<RuleRowProps> = ({
@@ -31,8 +32,9 @@ export const RuleRow: React.FC<RuleRowProps> = ({
   canDelete,
   isHighlighted = false,
   isFallback = false,
+  readOnly = false,
 }) => {
-  const sortable = useSortable({ id: rule.id, disabled: isFallback });
+  const sortable = useSortable({ id: rule.id, disabled: isFallback || readOnly });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
   
   const style = {
