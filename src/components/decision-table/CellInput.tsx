@@ -62,12 +62,6 @@ export const CellInput: React.FC<CellInputProps> = ({
   const [isValid, setIsValid] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  useEffect(() => {
-    setLocalValue(value);
-    // 同步外部值时清除错误状态
-    setError(null);
-  }, [value]);
-
   // 实时验证函数
   const validate = useCallback((val: string): { valid: boolean; message?: string } => {
     if (!val.trim()) {
@@ -86,6 +80,24 @@ export const CellInput: React.FC<CellInputProps> = ({
       return validateOutputValue(val, dataType);
     }
   }, [dataType, isInput]);
+
+  useEffect(() => {
+    setLocalValue(value);
+    if (value && value.trim()) {
+      const result = validate(value);
+      if (!result.valid) {
+        setError(result.message || '格式错误');
+        setIsValid(false);
+      } else {
+        setError(null);
+        setIsValid(true);
+      }
+    } else {
+      setError(null);
+      setIsValid(false);
+    }
+  }, [value, validate]);
+
 
   // 输入变化时实时验证
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,8 +196,8 @@ export const CellInput: React.FC<CellInputProps> = ({
       className={cn(
         "relative h-full w-full min-w-[100px] group/cell",
         isSelected && !isFocused && "ring-2 ring-primary ring-inset",
-        error && "ring-2 ring-destructive ring-inset",
-        isValid && !error && localValue.trim() && !isFocused && "bg-green-50/30 dark:bg-green-950/10"
+        !readOnly && error && "ring-2 ring-destructive ring-inset",
+        !readOnly && isValid && !error && localValue.trim() && !isFocused && "bg-green-50/30 dark:bg-green-950/10"
       )}
       onMouseEnter={onMouseEnter}
     >
@@ -202,7 +214,7 @@ export const CellInput: React.FC<CellInputProps> = ({
         className={cn(
           "h-full border-0 rounded-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
           "bg-transparent text-sm pr-7",
-          error && "text-destructive",
+          !readOnly && error && "text-destructive",
           readOnly && "cursor-default focus-visible:ring-0"
         )}
         placeholder={readOnly ? '' : getPlaceholder(dataType, isInput)}
@@ -211,7 +223,7 @@ export const CellInput: React.FC<CellInputProps> = ({
 
       
       {/* 验证状态图标 */}
-      {localValue.trim() && !isFocused && (
+      {!readOnly && localValue.trim() && !isFocused && (
         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
           {error ? (
             <AlertCircle className="h-4 w-4 text-destructive" />
@@ -222,7 +234,7 @@ export const CellInput: React.FC<CellInputProps> = ({
       )}
       
       {/* 错误提示气泡 - 仅在聚焦时显示 */}
-      {error && isFocused && (
+      {!readOnly && error && isFocused && (
         <div className="absolute left-0 top-full z-20 mt-1 px-2.5 py-1.5 bg-destructive text-destructive-foreground text-xs rounded-md shadow-lg whitespace-nowrap flex items-center gap-1.5">
           <AlertCircle className="h-3 w-3 flex-shrink-0" />
           <span>{error}</span>
@@ -230,6 +242,7 @@ export const CellInput: React.FC<CellInputProps> = ({
           <div className="absolute -top-1 left-3 w-2 h-2 bg-destructive rotate-45" />
         </div>
       )}
+
       
       {/* 输入提示（悬浮时显示） */}
       {!localValue && !isFocused && (
