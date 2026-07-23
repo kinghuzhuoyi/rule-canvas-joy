@@ -51,26 +51,26 @@ export const RuleRow: React.FC<RuleRowProps> = ({
         "flex border-b border-border bg-card min-w-max transition-colors",
         isDragging && "opacity-50 shadow-lg z-10",
         isHighlighted && "bg-primary/10 ring-2 ring-primary/50 ring-inset",
-        isFallback && "bg-amber-500/5 border-t-2 border-t-amber-500/40"
+        isFallback && "border-t-2 border-t-border"
       )}
     >
       {/* 拖拽手柄 / 兜底标识 - sticky left */}
       <div
         className={cn(
           "w-8 flex-shrink-0 flex items-center justify-center border-r border-border sticky left-0 z-10",
-          isFallback ? "bg-amber-500/10" : "bg-muted/50 cursor-grab active:cursor-grabbing"
+          isFallback ? "bg-muted/50" : "bg-muted/50 cursor-grab active:cursor-grabbing"
         )}
         {...(isFallback ? {} : attributes)}
         {...(isFallback ? {} : listeners)}
         title={isFallback ? '兜底默认行（永远匹配）' : undefined}
       >
         {isFallback
-          ? <Shield className="h-4 w-4 text-amber-600" />
+          ? <Shield className="h-4 w-4 text-muted-foreground" />
           : <GripVertical className="h-4 w-4 text-muted-foreground" />}
       </div>
       
       {/* 输入列单元格 */}
-      <div className={cn("flex", isFallback ? "bg-muted/40" : "bg-secondary/10")}>
+      <div className={cn("flex", isFallback ? "bg-muted/30" : "bg-secondary/10")}>
         {inputColumns.map(column => (
           <div
             key={column.id}
@@ -99,7 +99,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       <div className="w-1 bg-border flex-shrink-0" />
       
       {/* 输出列单元格 */}
-      <div className={cn("flex", isFallback ? "bg-amber-500/5" : "bg-primary/5")}>
+      <div className="flex bg-primary/5">
         {outputColumns.map(column => (
           <div
             key={column.id}
@@ -119,10 +119,7 @@ export const RuleRow: React.FC<RuleRowProps> = ({
       </div>
       
       {/* 删除按钮 - sticky right */}
-      <div className={cn(
-        "w-10 flex-shrink-0 flex items-center justify-center border-l border-border sticky right-0 z-10",
-        isFallback ? "bg-amber-500/10" : "bg-muted/50"
-      )}>
+      <div className="w-10 flex-shrink-0 flex items-center justify-center bg-muted/50 border-l border-border sticky right-0 z-10">
         {!isFallback && canDelete && (
           <Button
             variant="ghost"
@@ -137,3 +134,4 @@ export const RuleRow: React.FC<RuleRowProps> = ({
     </div>
   );
 };
+
