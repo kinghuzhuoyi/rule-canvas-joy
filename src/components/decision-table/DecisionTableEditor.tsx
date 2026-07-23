@@ -15,9 +15,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
-import { Plus, Copy, ClipboardPaste, FileText } from 'lucide-react';
+import { Plus, Copy, ClipboardPaste, FileText, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Column, Rule, Variable, DataType, generateId } from './types';
+import { Column, Rule, InputExpr, DataType, generateId, expressionToString, inferExprDataType } from './types';
 import { TableHeader } from './TableHeader';
 import { RuleRow } from './RuleRow';
 import { useTableSelection } from './useTableSelection';
@@ -218,13 +218,14 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   };
   
   // 添加输入列 - 支持 insertIndex
-  const handleAddInputColumn = useCallback((variable: Variable, insertIndex?: number) => {
+  const handleAddInputColumn = useCallback((expr: InputExpr, insertIndex?: number) => {
     const newColumn: Column = {
       id: generateId(),
-      name: variable.name,
-      dataType: variable.dataType,
+      name: expressionToString(expr),
+      dataType: inferExprDataType(expr),
       isInput: true,
-      variableId: variable.id,
+      inputExpr: expr,
+      variableId: expr.kind === 'variable' ? expr.variableId : undefined,
     };
     
     setColumns(prev => {
@@ -237,7 +238,6 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       return [...inputCols, ...outputCols];
     });
     
-    // 为所有规则添加新列的单元格
     setRules(prev => prev.map(rule => ({
       ...rule,
       cells: { ...rule.cells, [newColumn.id]: '' },
@@ -263,7 +263,6 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
       return [...inputCols, ...outputCols];
     });
     
-    // 为所有规则添加新列的单元格
     setRules(prev => prev.map(rule => ({
       ...rule,
       cells: { ...rule.cells, [newColumn.id]: '' },
@@ -271,11 +270,19 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
   }, []);
   
   // 编辑列
-  const handleEditColumn = useCallback((columnId: string, name: string, dataType: DataType) => {
+  const handleEditColumn = useCallback((columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => {
     setColumns(prev => prev.map(col =>
-      col.id === columnId ? { ...col, name, dataType } : col
+      col.id === columnId
+        ? {
+            ...col,
+            name,
+            dataType,
+            ...(inputExpr !== undefined ? { inputExpr, variableId: inputExpr.kind === 'variable' ? inputExpr.variableId : undefined } : {}),
+          }
+        : col
     ));
   }, []);
+
   
   // 删除列
   const handleDeleteColumn = useCallback((columnId: string) => {
