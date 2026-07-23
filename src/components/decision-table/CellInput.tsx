@@ -13,6 +13,7 @@ interface CellInputProps {
   onChange: (value: string) => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
+  readOnly?: boolean;
 }
 
 // 获取输入提示文本
