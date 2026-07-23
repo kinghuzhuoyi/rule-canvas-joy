@@ -163,6 +163,7 @@ export const DecisionTableEditor: React.FC<DecisionTableEditorProps> = ({
     };
 
     const handlePaste = (e: ClipboardEvent) => {
+      if (readOnly) return;
       if (selectedCells.size === 0) return;
       const text = e.clipboardData?.getData('text/plain');
       if (!text) return;
