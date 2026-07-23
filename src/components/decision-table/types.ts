@@ -127,6 +127,7 @@ export function inferExprDataType(expr?: InputExpr | null): DataType {
 export interface Column {
   id: string;
   name: string;
+  code?: string; // 输出列编码（可选，输出列使用）
   dataType: DataType;
   isInput: boolean; // true = 输入列, false = 输出列
   variableId?: string; // 仅输入列有（兼容旧数据）
