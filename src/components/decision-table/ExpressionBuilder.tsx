@@ -241,14 +241,15 @@ export const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 p-3 min-w-[320px]">
+    <div className="flex flex-col gap-3 p-3 w-[360px] max-w-[calc(100vw-2rem)]">
       <div className="text-xs font-medium text-muted-foreground">构建输入表达式</div>
-      <div className="min-h-[36px] p-2 rounded border border-border bg-muted/30 flex flex-wrap items-center gap-1">
+      <div className="min-h-[36px] max-h-[240px] overflow-auto p-2 rounded border border-border bg-muted/30 flex flex-wrap items-center gap-1 break-all">
         <ExprNode
           expr={expr}
           onChange={(next) => setExpr(next)}
         />
       </div>
+
       {expr && (
         <div className="text-xs text-muted-foreground font-mono px-1">
           预览：{expressionToString(expr)}
