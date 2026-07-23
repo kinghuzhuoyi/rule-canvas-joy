@@ -3,17 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, X, Pencil, Trash2 } from 'lucide-react';
-import { Column, DataType, Variable, DATA_TYPE_LABELS, DATA_TYPE_ICONS } from './types';
-import { VariableSelector } from './VariableSelector';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Column, DataType, InputExpr, DATA_TYPE_LABELS, DATA_TYPE_ICONS, expressionToString, inferExprDataType } from './types';
+import { ExpressionBuilder } from './ExpressionBuilder';
 import { cn } from '@/lib/utils';
 interface TableHeaderProps {
   columns: Column[];
-  onAddInputColumn: (variable: Variable, insertIndex?: number) => void;
+  onAddInputColumn: (expr: InputExpr, insertIndex?: number) => void;
   onAddOutputColumn: (name: string, dataType: DataType, insertIndex?: number) => void;
-  onEditColumn: (columnId: string, name: string, dataType: DataType) => void;
+  onEditColumn: (columnId: string, name: string, dataType: DataType, inputExpr?: InputExpr) => void;
   onDeleteColumn: (columnId: string) => void;
 }
+
 
 // 列间分隔线组件 - 悬浮显示添加按钮
 interface ColumnDividerProps {
